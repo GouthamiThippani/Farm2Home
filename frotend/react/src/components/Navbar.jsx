@@ -1,58 +1,98 @@
-import React from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import React, { useState, useEffect } from "react";
+import { BrowserRouter as Router, Routes, Route, Navigate } from "react-router-dom";
+import Login from "./components/Login";
+import FarmerHome from "./components/FarmerHome";
+import BuyerHome from "./components/BuyerHome";
+import MarketPrices from "./components/MarketPrices";
+import SellProducts from "./components/SellProducts";
+import FarmerProfile from "./components/FarmerProfile";
+import Analytics from "./components/Analytics";
+import Help from "./components/Help";
+import BuyerProfile from "./components/BuyerProfile";
+import Cart from "./components/Cart";
+import Products from "./components/Products"; // <-- renamed Products page
 
-export default function Navbar({ user, setUser }) {
-  const navStyle = {
-    background: '#0b7a3f',
-    color: 'white',
-    padding: '12px 20px',
-    boxShadow: '0 2px 6px rgba(0,0,0,0.12)',
-    position: 'fixed',
-    top: 0,
-    left: 0,
-    right: 0,
-    zIndex: 50
+function App() {
+  const [user, setUser] = useState(null);
+
+  useEffect(() => {
+    const loggedUser = JSON.parse(localStorage.getItem("ib_user") || "null");
+    setUser(loggedUser);
+  }, []);
+
+  const handleLogin = (loggedUser) => {
+    setUser(loggedUser);
+    localStorage.setItem("ib_user", JSON.stringify(loggedUser));
   };
-
-  const container = {
-    maxWidth: 1100,
-    margin: '0 auto',
-    display: 'flex',
-    justifyContent: 'space-between',
-    alignItems: 'center'
-  };
-
-  const links = { display: 'flex', gap: 18, alignItems: 'center' };
-
-  const navigate = useNavigate();
 
   const handleLogout = () => {
-    localStorage.removeItem('ib_user');
+    localStorage.removeItem("ib_user");
     setUser(null);
-    navigate('/');
   };
 
   return (
-    <nav style={navStyle}>
-      <div style={container}>
-        <div style={{ fontWeight: 700, fontSize: 20 }}>Invisible Bridge</div>
-        <div style={links}>
-          <Link style={{ color: 'white', textDecoration: 'none' }} to="/market-prices">Market Prices</Link>
-          {user?.role === 'farmer' && <Link style={{ color: 'white', textDecoration: 'none' }} to="/farmer/sell">Sell Products</Link>}
-          {user?.role === 'farmer' && <Link style={{ color: 'white', textDecoration: 'none' }} to="/farmer/analytics">Analytics</Link>}
-          {user?.role === 'farmer' && <Link style={{ color: 'white', textDecoration: 'none' }} to="/farmer/profile">Profile</Link>}
-          {user?.role === 'buyer' && <Link style={{ color: 'white', textDecoration: 'none' }} to="/buyer/home">Browse</Link>}
-          {user?.role === 'buyer' && <Link style={{ color: 'white', textDecoration: 'none' }} to="/buyer/cart">Cart</Link>}
-          <Link style={{ color: 'white', textDecoration: 'none' }} to="/help">Help</Link>
-          {user ? (
-            <button onClick={handleLogout} style={{ background: '#fff', color: '#0b7a3f', padding: '6px 10px', borderRadius: 8, border: 'none', cursor: 'pointer' }}>
-              Logout
-            </button>
-          ) : (
-            <Link style={{ color: 'white', textDecoration: 'none', border: '1px solid rgba(255,255,255,0.2)', padding: '6px 10px', borderRadius: 8 }} to="/">Login / Signup</Link>
-          )}
-        </div>
-      </div>
-    </nav>
+    <Router>
+      <Routes>
+        {/* Login page */}
+        <Route
+          path="/"
+          element={!user ? <Login onLogin={handleLogin} /> : 
+            <Navigate to={user.role === "farmer" ? "/farmer-home" : "/buyer-home"} />}
+        />
+
+        {/* Farmer Routes */}
+        <Route
+          path="/farmer-home"
+          element={user?.role === "farmer" ? 
+            <FarmerHome farmerName={user.name} farmerEmail={user.email} onLogout={handleLogout} /> : 
+            <Navigate to="/" />}
+        />
+        <Route
+          path="/market-prices"
+          element={user?.role === "farmer" ? <MarketPrices /> : <Navigate to="/" />}
+        />
+        <Route
+          path="/sell-products"
+          element={user?.role === "farmer" ? <SellProducts /> : <Navigate to="/" />}
+        />
+        <Route
+          path="/profile"
+          element={user?.role === "farmer" ? <FarmerProfile /> : <Navigate to="/" />}
+        />
+        <Route
+          path="/analytics"
+          element={user?.role === "farmer" ? <Analytics /> : <Navigate to="/" />}
+        />
+        <Route
+          path="/help"
+          element={user ? <Help /> : <Navigate to="/" />}
+        />
+
+        {/* Buyer Routes */}
+        <Route
+          path="/buyer-home"
+          element={user?.role === "buyer" ? 
+            <BuyerHome buyerName={user.name} buyerEmail={user.email} onLogout={handleLogout} /> : 
+            <Navigate to="/" />}
+        />
+        <Route
+          path="/cart"
+          element={user?.role === "buyer" ? <Cart /> : <Navigate to="/" />}
+        />
+        <Route
+          path="/buyer-profile"
+          element={user?.role === "buyer" ? <BuyerProfile /> : <Navigate to="/" />}
+        />
+        <Route
+          path="/products"
+          element={user?.role === "buyer" ? <Products /> : <Navigate to="/" />}
+        />
+
+        {/* Catch-all */}
+        <Route path="*" element={<Navigate to="/" />} />
+      </Routes>
+    </Router>
   );
 }
+
+export default App;

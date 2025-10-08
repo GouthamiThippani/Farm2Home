@@ -10,7 +10,7 @@ import Analytics from "./components/Analytics";
 import Help from "./components/Help";
 import BuyerProfile from "./components/BuyerProfile";
 import Cart from "./components/Cart";
-import Products from "./components/Products"; // <-- Added
+import Products from "./components/Products"; // <-- Add this
 
 function App() {
   const [user, setUser] = useState(null);
@@ -33,17 +33,8 @@ function App() {
   return (
     <Router>
       <Routes>
-        {/* Login page or redirect to home */}
-        <Route
-          path="/"
-          element={
-            user
-              ? user.role === "farmer"
-                ? <FarmerHome farmerName={user.name} farmerEmail={user.email} onLogout={handleLogout} />
-                : <BuyerHome buyerName={user.name} buyerEmail={user.email} onLogout={handleLogout} />
-              : <Login onLogin={handleLogin} />
-          }
-        />
+        {/* Login page */}
+        <Route path="/" element={<Login onLogin={handleLogin} />} />
 
         {/* Farmer Routes */}
         {user?.role === "farmer" && (
@@ -67,7 +58,7 @@ function App() {
               path="/buyer-home"
               element={<BuyerHome buyerName={user.name} buyerEmail={user.email} onLogout={handleLogout} />}
             />
-            <Route path="/products" element={<Products />} /> {/* Added */}
+            <Route path="/products" element={<Products />} /> {/* <-- Added */}
             <Route path="/cart" element={<Cart />} />
             <Route path="/buyer-profile" element={<BuyerProfile />} />
             <Route path="/help" element={<Help />} />

@@ -1,198 +1,168 @@
-import React, { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import React, { useState } from "react";
+import Navbar from "./Navbar";
+import Footer from "./Footer";
 
-export default function MarketPrices({ farmerName = "Farmer", onLogout }) {
-  const navigate = useNavigate();
+export default function MarketPrices() {
+  const [commodity, setCommodity] = useState("");
+  const [states, setStates] = useState([]);
+  const [state, setState] = useState("");
+  const [markets, setMarkets] = useState([]);
+  const [market, setMarket] = useState("");
+  const [quantity, setQuantity] = useState("");
   const [prices, setPrices] = useState([]);
-  const [showProfile, setShowProfile] = useState(false);
+  const [totalRevenue, setTotalRevenue] = useState(null);
+  const [loading, setLoading] = useState(false);
 
-  useEffect(() => {
-    setPrices([
-      { name: "Wheat", price: 25 },
-      { name: "Rice", price: 40 },
-      { name: "Corn", price: 30 },
-    ]);
-  }, []);
+  const apiKey = "579b464db66ec23bdd000001cdd3946e44ce4aad7209ff7b23ac571b";
+  const baseUrl = "https://api.data.gov.in/resource/9ef84268-d588-465a-a308-a864a43d0070";
 
-  // Fade animation on scroll
-  useEffect(() => {
-    const handleScroll = () => {
-      document.querySelectorAll(".fade-section").forEach((section) => {
-        if (section.getBoundingClientRect().top < window.innerHeight - 100)
-          section.classList.add("visible");
-      });
-    };
-    window.addEventListener("scroll", handleScroll);
-    handleScroll();
-    return () => window.removeEventListener("scroll", handleScroll);
-  }, []);
+  const fetchStates = async (crop) => {
+    setState(""); setMarket(""); setMarkets([]); setPrices([]); setTotalRevenue(null);
+    if (!crop) return;
+    setLoading(true);
+    try {
+      const res = await fetch(`${baseUrl}?api-key=${apiKey}&format=json&limit=100&filters[commodity]=${crop}`);
+      const data = await res.json();
+      if (data.records) {
+        const uniqueStates = [...new Set(data.records.map((r) => r.state))];
+        setStates(uniqueStates);
+      }
+    } catch (err) {
+      console.error(err); alert("Failed to fetch states.");
+    } finally { setLoading(false); }
+  };
 
-  // Close dropdown on clicking outside
-  useEffect(() => {
-    const handleClickOutside = (e) => {
-      if (!e.target.closest(".profile-container")) setShowProfile(false);
-    };
-    window.addEventListener("click", handleClickOutside);
-    return () => window.removeEventListener("click", handleClickOutside);
-  }, []);
+  const fetchMarkets = async (crop, stateName) => {
+    setMarket(""); setMarkets([]); setPrices([]); setTotalRevenue(null);
+    if (!crop || !stateName) return;
+    setLoading(true);
+    try {
+      const res = await fetch(`${baseUrl}?api-key=${apiKey}&format=json&limit=100&filters[commodity]=${crop}&filters[state]=${stateName}`);
+      const data = await res.json();
+      if (data.records) {
+        const uniqueMarkets = [...new Set(data.records.map((r) => `${r.market} (${r.arrivals_in_qtl} qtl)`))];
+        setMarkets(uniqueMarkets);
+      }
+    } catch (err) {
+      console.error(err); alert("Failed to fetch markets.");
+    } finally { setLoading(false); }
+  };
 
-  const handleNav = (path) => navigate(path);
-
-  const handleLogout = () => {
-    if (onLogout) onLogout(); // call parent logout
-    navigate("/"); // go to login page
+  const fetchPrices = async () => {
+    if (!commodity || !state || !market || !quantity) {
+      alert("Please fill all fields!"); return;
+    }
+    setLoading(true);
+    try {
+      const marketName = market.split(" (")[0];
+      const res = await fetch(`${baseUrl}?api-key=${apiKey}&format=json&limit=10&filters[commodity]=${commodity}&filters[state]=${state}&filters[market]=${marketName}`);
+      const data = await res.json();
+      if (!data.records || data.records.length === 0) {
+        alert("No prices found!"); setPrices([]); setTotalRevenue(null); return;
+      }
+      setPrices(data.records);
+      const latestPrice = parseInt(data.records[0]["modal_price"]);
+      setTotalRevenue(latestPrice * quantity);
+    } catch (err) {
+      console.error(err); alert("Failed to fetch prices.");
+    } finally { setLoading(false); }
   };
 
   return (
     <div className="market-page">
-      {/* Navbar */}
-      <nav className="navbar">
-        <div className="nav-left">Farm2Home 🌾</div>
-        <div className="nav-right">
-          <a onClick={() => handleNav("/farmer-home")}>Home</a>
-          <a onClick={() => handleNav("/market-prices")} className="active">Market Prices</a>
-          <a onClick={() => handleNav("/sell-products")}>Sell</a>
-          <a onClick={() => handleNav("/analytics")}>Analytics</a>
-          <a onClick={() => handleNav("/payments")}>Payments</a>
-          <a onClick={() => handleNav("/help")}>Help</a>
+      <div className="container">
+        <h2>🌾 Farm2Home Market Prices</h2>
 
-          {/* Profile Circle */}
-          <div className="profile-container">
-            <div className="profile-circle" onClick={() => setShowProfile(!showProfile)}>
-              {farmerName[0].toUpperCase()}
-            </div>
-            {showProfile && (
-              <div className="profile-dropdown">
-                <button onClick={() => handleNav("/profile")}>View Profile</button>
-                <button onClick={handleLogout}>Logout</button>
-              </div>
-            )}
+        <div className="form-grid">
+          <div className="field">
+            <label>Crop:</label>
+            <select
+              value={commodity}
+              onChange={(e) => { setCommodity(e.target.value); fetchStates(e.target.value); }}
+            >
+              <option value="">Select Crop</option>
+              <option value="Onion">Onion</option>
+              <option value="Tomato">Tomato</option>
+              <option value="Potato">Potato</option>
+              <option value="Wheat">Wheat</option>
+              <option value="Rice">Rice</option>
+              <option value="Maize">Maize</option>
+            </select>
+          </div>
+
+          <div className="field">
+            <label>Quantity (quintals):</label>
+            <input type="number" min="1" value={quantity} onChange={e => setQuantity(e.target.value)} />
+          </div>
+
+          <div className="field">
+            <label>State:</label>
+            <select value={state} onChange={e => { setState(e.target.value); fetchMarkets(commodity, e.target.value); }} disabled={!commodity}>
+              <option value="">Select State</option>
+              {states.map((s) => <option key={s} value={s}>{s}</option>)}
+            </select>
+          </div>
+
+          <div className="field">
+            <label>Market:</label>
+            <select value={market} onChange={e => setMarket(e.target.value)} disabled={!state}>
+              <option value="">Select Market</option>
+              {markets.map((m) => <option key={m} value={m}>{m}</option>)}
+            </select>
           </div>
         </div>
-      </nav>
 
-      {/* Market Prices Table */}
-      <section className="fade-section content-section">
-        <h2 className="section-title">Market Prices</h2>
-        <div className="table-card">
-          <table>
-            <thead>
-              <tr>
-                <th>Crop</th>
-                <th>Price (₹/kg)</th>
-              </tr>
-            </thead>
-            <tbody>
-              {prices.map((c, i) => (
-                <tr key={i}>
-                  <td>{c.name}</td>
-                  <td>₹{c.price}</td>
+        <button onClick={fetchPrices} disabled={loading}>{loading ? "Fetching..." : "Get Prices"}</button>
+
+        {prices.length > 0 && (
+          <div className="table-container">
+            <h3>Market Prices for {commodity} in {market}, {state}</h3>
+            <table>
+              <thead>
+                <tr>
+                  <th>Date</th><th>Min Price</th><th>Modal Price</th><th>Max Price</th><th>Arrivals (qtl)</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      </section>
+              </thead>
+              <tbody>
+                {prices.map((p, idx) => (
+                  <tr key={idx}>
+                    <td>{p.arrival_date}</td>
+                    <td>₹{p.min_price}</td>
+                    <td>₹{p.modal_price}</td>
+                    <td>₹{p.max_price}</td>
+                    <td>{p.arrivals_in_qtl}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
 
-      {/* Footer */}
-      <footer className="footer fade-section">
-        <div className="footer-content">
-          <div className="footer-box">
-            <h3>Farm2Home</h3>
-            <p>
-              Empowering small and marginal farmers with AI-powered market insights and digital access.
-            </p>
-          </div>
-          <div className="footer-box">
-            <h3>Contact</h3>
-            <p>Email: support@farm2home.com</p>
-            <p>Phone: +91 789xx xxxxx</p>
-            <p>Address: Hyderabad, India</p>
-          </div>
-          <div className="footer-box">
-            <h3>Follow Us</h3>
-            <p>Facebook | Twitter | Instagram | Email</p>
-          </div>
-        </div>
-        <p className="footer-bottom">
-          © 2025 Farm2Home — All rights reserved.
-        </p>
-      </footer>
+        {totalRevenue !== null && <div className="revenue">💰 Estimated Revenue: ₹{totalRevenue}</div>}
+      </div>
+      
 
-      {/* Styles */}
       <style>{`
-        * { box-sizing: border-box; margin:0; padding:0; }
-        .market-page { font-family: 'Poppins', sans-serif; background:#e6f0fa; min-height:100vh; display:flex; flex-direction:column; }
-
-        /* Navbar */
-        .navbar { display:flex; justify-content:space-between; align-items:center; padding:10px 40px; background:white; box-shadow:0 4px 12px rgba(0,0,0,0.05); position:sticky; top:0; z-index:1000; }
-        .nav-left { font-size:24px; font-weight:700; color:#2a68d4; }
-        .nav-right { display:flex; align-items:center; gap:12px; }
-        .nav-right a { cursor:pointer; text-decoration:none; color:#2a68d4; font-weight:500; padding:6px 8px; border-radius:6px; transition:0.2s; }
-        .nav-right a:hover, .nav-right a.active { background:#cce0ff; }
-
-        /* Profile Circle & Dropdown */
-        .profile-container { position: relative; margin-left: 8px; }
-        .profile-circle {
-          width: 36px;
-          height: 36px;
-          border-radius: 50%;
-          background:#2a68d4;
-          color:white;
-          display:flex;
-          align-items:center;
-          justify-content:center;
-          font-weight:bold;
-          cursor:pointer;
-          box-shadow:0 2px 8px rgba(0,0,0,0.15);
-        }
-        .profile-dropdown {
-          position:absolute;
-          top:45px;
-          right:0;
-          background:white;
-          border-radius:10px;
-          padding:8px;
-          display:flex;
-          flex-direction:column;
-          gap:6px;
-          box-shadow:0 8px 20px rgba(0,0,0,0.15);
-          z-index:100;
-        }
-        .profile-dropdown button {
-          border:none;
-          background:transparent;
-          padding:6px 10px;
-          cursor:pointer;
-          font-weight:600;
-          color:#2a68d4;
-          text-align:left;
-          border-radius:6px;
-        }
-        .profile-dropdown button:last-child { color:#ef4444; }
-        .profile-dropdown button:hover { background:#f0f4ff; }
-
-        /* Table Section */
-        .content-section { padding:40px 20px; max-width:1100px; margin: 0 auto; flex:1; }
-        .section-title { font-size:28px; color:#2a68d4; margin-bottom:24px; text-align:center; }
-        .table-card { background:white; padding:20px; border-radius:12px; box-shadow:0 6px 18px rgba(0,0,0,0.08); transition:0.3s; }
-        .table-card:hover { transform:translateY(-4px); box-shadow:0 8px 20px rgba(0,0,0,0.12); }
-        table { width:100%; border-collapse:collapse; font-size:16px; }
-        thead { background:#cce0ff; color:#003d99; }
-        th, td { text-align:left; padding:12px; }
-        tbody tr { border-bottom:1px solid #eee; transition:0.3s; }
-        tbody tr:hover { background:#f0f8ff; }
-
-        /* Footer */
-        .footer { background: linear-gradient(135deg, #2a68d4, #5a9dfc); color:white; padding:40px 20px 25px; text-align:center; margin-top:auto; border-radius:12px 12px 0 0; }
-        .footer-content { display:flex; flex-wrap:wrap; justify-content:space-around; margin-bottom:20px; }
-        .footer-box { max-width:300px; margin:20px; text-align:left; }
-        .footer-box h3 { font-size:18px; margin-bottom:8px; }
-        .footer-bottom { font-size:12px; opacity:0.8; }
-
-        /* Fade Animation */
-        .fade-section { opacity:0; transform:translateY(20px); transition:0.6s ease-out; }
-        .fade-section.visible { opacity:1; transform:translateY(0); }
+        .market-page { display: flex; flex-direction: column; min-height: 100vh; background: linear-gradient(145deg, #e0f0ff, #c1e5ff); }
+        .container { flex: 1; max-width: 950px; margin: 50px auto; padding: 30px; background: linear-gradient(to right, #ffffff, #f0f8ff); border-radius: 16px; box-shadow: 0 15px 35px rgba(0,0,0,0.15); transition: all 0.3s ease; }
+        h2 { text-align: center; font-size: 30px; font-weight: 700; background: linear-gradient(90deg, #2563eb, #1e40af); -webkit-background-clip: text; -webkit-text-fill-color: transparent; animation: fadeInText 1.5s ease forwards; margin-bottom: 30px; }
+        @keyframes fadeInText { 0% { opacity:0; transform: translateY(-20px); } 100% { opacity:1; transform: translateY(0); } }
+        .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 25px; }
+        .field label { font-weight: 600; margin-bottom: 5px; display: block; color: #1e3a8a; transition: color 0.3s ease; }
+        .field label:hover { color: #2563eb; }
+        input, select { width: 100%; padding: 12px; border-radius: 10px; border: 1px solid #ccc; transition: 0.4s; background: #f5faff; font-size: 15px; }
+        input:focus, select:focus { border-color: #1e40af; box-shadow: 0 0 12px rgba(37,99,235,0.3); outline: none; transform: scale(1.02); }
+        button { width: 100%; padding: 14px; background: linear-gradient(90deg, #1e40af, #2563eb); color: #fff; border: none; border-radius: 12px; font-weight: 700; cursor: pointer; font-size: 16px; transition: all 0.3s ease; }
+        button:hover { transform: scale(1.05); box-shadow: 0 8px 25px rgba(37,99,235,0.4); background: linear-gradient(90deg, #2563eb, #1e3a8a); }
+        .table-container { margin-top: 30px; overflow-x: auto; border-radius: 16px; animation: fadeIn 1s ease; }
+        table { width: 100%; border-collapse: collapse; background: #f9faff; box-shadow: 0 5px 20px rgba(0,0,0,0.05); }
+        th, td { padding: 14px; border: 1px solid #ddd; text-align: center; font-size: 15px; transition: background 0.3s; }
+        th { background: linear-gradient(90deg, #93c5fd, #60a5fa); color: #1e3a8a; }
+        tr:hover { background: linear-gradient(90deg, #bfdbfe, #93c5fd); }
+        .revenue { margin-top: 25px; text-align: center; font-size: 22px; font-weight: 700; color: #1e40af; animation: bounce 1.5s infinite; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+        @keyframes bounce { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-8px); } }
+        @media(max-width: 700px) { .form-grid { grid-template-columns: 1fr; } }
       `}</style>
     </div>
   );

@@ -1,171 +1,156 @@
 import React, { useEffect, useState } from "react";
-import { Line } from "react-chartjs-2";
-import { Chart as ChartJS, LineElement, CategoryScale, LinearScale, PointElement, Tooltip, Legend } from "chart.js";
-import { useNavigate } from "react-router-dom";
+import { Line, Bar, Doughnut } from "react-chartjs-2";
+import { Chart as ChartJS, LineElement, BarElement, ArcElement, CategoryScale, LinearScale, PointElement, Tooltip, Legend } from "chart.js";
 
-ChartJS.register(LineElement, CategoryScale, LinearScale, PointElement, Tooltip, Legend);
+ChartJS.register(LineElement, BarElement, ArcElement, CategoryScale, LinearScale, PointElement, Tooltip, Legend);
 
-export default function Analytics({ farmerName = "Farmer", farmerEmail = "farmer@example.com", onLogout }) {
-  const navigate = useNavigate();
+export default function Analytics({ farmerName = "Farmer" }) {
   const [sales, setSales] = useState([]);
-  const [showProfile, setShowProfile] = useState(false);
 
   useEffect(() => {
-    try { 
-      setSales(JSON.parse(localStorage.getItem('ib_sales') || '[]')); 
-    } catch { 
-      setSales([]); 
+    try {
+      setSales(JSON.parse(localStorage.getItem('ib_sales') || '[]'));
+    } catch {
+      setSales([]);
     }
   }, []);
 
-  // Aggregate sales by month (demo)
-  const labels = [];
-  const dataPoints = [];
-  if (sales.length === 0) {
-    labels.push('Jan','Feb','Mar','Apr','May','Jun');
-    dataPoints.push(5,8,6,12,9,15);
-  } else {
-    const counts = {};
-    sales.forEach(s => {
-      const d = new Date(s.date).toLocaleDateString();
-      counts[d] = (counts[d] || 0) + 1;
-    });
-    Object.keys(counts).slice(-12).forEach(k => { labels.push(k); dataPoints.push(counts[k]); });
-  }
+  const labels = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  const salesData = sales.length === 0 ? [5,8,6,12,9,15,10,14,7,11,13,8] : labels.map(m => sales.filter(s => new Date(s.date).toLocaleString('default', { month: 'short' }) === m).length);
+  const totalProducts = sales.length;
 
-  const chartData = {
+  const lineChartData = {
     labels,
     datasets: [
       {
-        label: 'Products Sold',
-        data: dataPoints,
+        label: "Products Sold",
+        data: salesData,
         fill: true,
-        borderColor: '#0b7a3f',
-        backgroundColor: 'rgba(11,122,63,0.15)',
-        tension: 0.25
+        borderColor: "#22d3ee",
+        backgroundColor: "rgba(34,211,238,0.2)",
+        tension: 0.4,
+        pointRadius: 6,
+        pointHoverRadius: 8,
       }
     ]
   };
 
-  const handleNav = (path) => navigate(path);
-
-  const handleLogout = () => {
-    if (onLogout) onLogout(); // call logout action
-    navigate("/");            // go to login page
+  const barChartData = {
+    labels,
+    datasets: [
+      {
+        label: "Monthly Revenue (₹)",
+        data: salesData.map(v => v * 120),
+        backgroundColor: "#3b82f6",
+        borderRadius: 8,
+      }
+    ]
   };
 
-  // Close profile dropdown on outside click
-  useEffect(() => {
-    const handleClickOutside = (e) => {
-      if (!e.target.closest(".profile-container")) setShowProfile(false);
-    };
-    window.addEventListener("click", handleClickOutside);
-    return () => window.removeEventListener("click", handleClickOutside);
-  }, []);
-
-  // Fade animation on scroll
-  useEffect(() => {
-    const handleScroll = () => {
-      document.querySelectorAll(".fade-section").forEach((section) => {
-        if (section.getBoundingClientRect().top < window.innerHeight - 100) section.classList.add("visible");
-      });
-    };
-    window.addEventListener("scroll", handleScroll);
-    handleScroll();
-    return () => window.removeEventListener("scroll", handleScroll);
-  }, []);
+  const doughnutData = {
+    labels: ["Sold", "Unsold"],
+    datasets: [
+      {
+        label: "Stock",
+        data: [totalProducts, 50 - totalProducts],
+        backgroundColor: ["#facc15", "#1e293b"],
+        borderWidth: 2
+      }
+    ]
+  };
 
   return (
     <div className="analytics-page">
-      {/* Navbar */}
-      <nav className="navbar">
-        <div className="nav-left">Farm2Home 🌾</div>
-        <div className="nav-right">
-          <a onClick={() => handleNav("/farmer-home")}>Home</a>
-          <a onClick={() => handleNav("/market-prices")}>Market Prices</a>
-          <a onClick={() => handleNav("/sell-products")}>Sell</a>
-          <a onClick={() => handleNav("/analytics")} className="active">Analytics</a>
-          <a onClick={() => handleNav("/payments")}>Payments</a>
-          <a onClick={() => handleNav("/help")}>Help</a>
+      {/* Particle background */}
+      <div className="particles"></div>
 
-          {/* Profile Circle */}
-          <div className="profile-container">
-            <div className="profile-icon" onClick={() => setShowProfile(!showProfile)}>
-              {farmerName[0].toUpperCase()}
-            </div>
-            {showProfile && (
-              <div className="profile-dropdown">
-                <p className="profile-name">{farmerName}</p>
-                <p className="profile-email">{farmerEmail}</p>
-                <button onClick={() => handleNav("/profile")}>View Profile</button>
-                <button onClick={handleLogout}>Logout</button>
-              </div>
-            )}
-          </div>
+      {/* Title */}
+      <h1 className="page-title">Farm Analytics Dashboard</h1>
+
+      {/* Info Cards */}
+      <div className="info-cards">
+        <div className="card total-sales">
+          <h3>Total Products Sold</h3>
+          <p>{totalProducts}</p>
         </div>
-      </nav>
+        <div className="card revenue">
+          <h3>Estimated Revenue</h3>
+          <p>₹{totalProducts * 120}</p>
+        </div>
+        <div className="card stock">
+          <h3>Stock Left</h3>
+          <p>{50 - totalProducts}</p>
+        </div>
+      </div>
 
-      {/* Analytics Section */}
-      <section className="fade-section content-section">
-        <h2 className="section-title">Analytics</h2>
+      {/* Charts */}
+      <div className="charts-section">
         <div className="chart-card">
-          <Line data={chartData} />
+          <h3>Monthly Products Sold</h3>
+          <Line data={lineChartData} />
         </div>
-      </section>
-
-      {/* Footer */}
-      <footer className="footer fade-section">
-        <div className="footer-content">
-          <div className="footer-box">
-            <h3>Farm2Home</h3>
-            <p>Empowering small and marginal farmers with AI-powered market insights and digital access.</p>
-          </div>
-          <div className="footer-box">
-            <h3>Contact</h3>
-            <p>Email: support@farm2home.com</p>
-            <p>Phone: +91 789xx xxxxx</p>
-            <p>Address: Hyderabad, India</p>
-          </div>
-          <div className="footer-box">
-            <h3>Follow Us</h3>
-            <p>Facebook | Twitter | Instagram | Email</p>
-          </div>
+        <div className="chart-card">
+          <h3>Monthly Revenue (₹)</h3>
+          <Bar data={barChartData} />
         </div>
-        <p className="footer-bottom">© 2025 Farm2Home — All rights reserved.</p>
-      </footer>
+        <div className="chart-card doughnut-card">
+          <h3>Stock Distribution</h3>
+          <Doughnut data={doughnutData} />
+        </div>
+      </div>
 
-      {/* Styles */}
       <style>{`
-        * { box-sizing: border-box; margin:0; padding:0; }
-        .analytics-page { font-family: 'Poppins', sans-serif; background: #e6f2ff; min-height:100vh; display:flex; flex-direction:column; }
+        * { box-sizing:border-box; margin:0; padding:0; font-family:'Poppins', sans-serif; }
+        .analytics-page {
+          position:relative; min-height:100vh; background:linear-gradient(135deg, #0f172a, #1e293b); color:white; display:flex; flex-direction:column; align-items:center; padding:40px 20px; overflow:hidden;
+        }
 
-        .navbar { display:flex; justify-content:space-between; align-items:center; padding:10px 40px; background:white; box-shadow:0 4px 12px rgba(0,0,0,0.05); position:sticky; top:0; z-index:1000; }
-        .nav-left { font-size:24px; font-weight:700; color:#3b82f6; }
-        .nav-right { display:flex; align-items:center; gap:12px; }
-        .nav-right a { cursor:pointer; text-decoration:none; color:#3b82f6; font-weight:500; padding:6px 8px; border-radius:6px; transition:0.2s; }
-        .nav-right a:hover, .nav-right a.active { background:#dbe9ff; }
+        .page-title {
+          font-size:36px; font-weight:700; margin-bottom:40px; text-shadow:0 4px 20px rgba(0,0,0,0.5); animation: fadeInDown 1.2s;
+        }
 
-        .profile-container { position:relative; }
-        .profile-icon { width:36px; height:36px; border-radius:50%; background:#3b82f6; color:white; display:flex; align-items:center; justify-content:center; font-weight:bold; cursor:pointer; }
-        .profile-dropdown { position:absolute; right:0; top:45px; background:white; border-radius:12px; padding:8px; box-shadow:0 6px 20px rgba(0,0,0,0.1); display:flex; flex-direction:column; min-width:140px; }
-        .profile-dropdown p { font-size:13px; margin:2px 0; }
-        .profile-dropdown button { border:none; background:none; padding:8px; cursor:pointer; text-align:left; transition:0.2s; }
-        .profile-dropdown button:hover { background:#f0f4ff; }
+        @keyframes fadeInDown { from {opacity:0; transform:translateY(-30px);} to {opacity:1; transform:translateY(0);} }
 
-        .content-section { padding:40px 20px; max-width:1100px; margin:0 auto; flex:1; }
-        .section-title { font-size:28px; color:#3b82f6; margin-bottom:24px; text-align:center; }
+        /* Particles animation */
+        .particles {
+          position:absolute; width:200%; height:200%; top:-50%; left:-50%;
+          background: radial-gradient(circle, rgba(255,255,255,0.05) 2px, transparent 2px);
+          background-size:40px 40px;
+          animation: moveParticles 15s linear infinite;
+          z-index:0;
+        }
+        @keyframes moveParticles { from {background-position:0 0;} to {background-position:200px 200px;} }
 
-        .chart-card { background:white; padding:20px; border-radius:12px; box-shadow:0 6px 18px rgba(0,0,0,0.08); transition:0.3s; }
-        .chart-card:hover { transform:translateY(-4px); box-shadow:0 8px 20px rgba(0,0,0,0.12); }
+        /* Info cards */
+        .info-cards { display:flex; flex-wrap:wrap; gap:25px; justify-content:center; z-index:1; }
+        .card {
+          background:rgba(15,23,42,0.8); padding:25px; border-radius:20px; width:220px; text-align:center;
+          backdrop-filter:blur(15px); box-shadow:0 8px 35px rgba(0,0,0,0.3);
+          transition: transform 0.4s, box-shadow 0.4s, background 0.4s;
+        }
+        .card:hover {
+          transform:translateY(-8px) scale(1.07);
+          box-shadow:0 15px 45px rgba(0,0,0,0.5);
+          background: rgba(34,40,62,0.9);
+        }
+        .card h3 { font-size:18px; margin-bottom:10px; color:#60a5fa; text-transform:uppercase; letter-spacing:1px; }
+        .card p { font-size:24px; font-weight:700; color:#22d3ee; animation: pulse 2s infinite; }
 
-        .footer { background: linear-gradient(135deg, #3b82f6, #60a5fa); color:white; padding:40px 20px 25px; text-align:center; margin-top:auto; border-radius:12px 12px 0 0; }
-        .footer-content { display:flex; flex-wrap:wrap; justify-content:space-around; margin-bottom:20px; }
-        .footer-box { max-width:300px; margin:20px; text-align:left; }
-        .footer-box h3 { font-size:18px; margin-bottom:8px; }
-        .footer-bottom { font-size:12px; opacity:0.8; }
+        @keyframes pulse { 0%,100% {transform:scale(1);} 50% {transform:scale(1.05);} }
 
-        .fade-section { opacity:0; transform:translateY(20px); transition:0.6s ease-out; }
-        .fade-section.visible { opacity:1; transform:translateY(0); }
+        /* Charts section */
+        .charts-section { display:flex; flex-wrap:wrap; gap:30px; justify-content:center; margin-top:50px; z-index:1; }
+        .chart-card {
+          background:rgba(15,23,42,0.8); padding:25px; border-radius:20px; width:380px;
+          backdrop-filter:blur(15px); box-shadow:0 10px 35px rgba(0,0,0,0.35);
+          transition: transform 0.4s, box-shadow 0.4s, background 0.4s;
+        }
+        .chart-card:hover { transform:translateY(-8px) scale(1.02); box-shadow:0 15px 45px rgba(0,0,0,0.5); background:rgba(34,40,62,0.9); }
+        .chart-card h3 { text-align:center; margin-bottom:15px; color:#60a5fa; }
+
+        /* Doughnut chart card */
+        .doughnut-card { display:flex; flex-direction:column; align-items:center; }
+
       `}</style>
     </div>
   );

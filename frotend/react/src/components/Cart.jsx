@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
@@ -6,8 +6,8 @@ import autoTable from "jspdf-autotable";
 export default function Cart({ buyerName = "Buyer", onLogout }) {
   const navigate = useNavigate();
   const [cart, setCart] = useState(JSON.parse(localStorage.getItem("ib_cart") || "[]"));
-  const [billGenerated, setBillGenerated] = useState(false);
   const [showProfile, setShowProfile] = useState(false);
+  const [billGenerated, setBillGenerated] = useState(false);
 
   useEffect(() => {
     const handleClickOutside = (e) => {
@@ -17,26 +17,29 @@ export default function Cart({ buyerName = "Buyer", onLogout }) {
     return () => window.removeEventListener("click", handleClickOutside);
   }, []);
 
-  // Consolidate cart: group by product id
-  const consolidatedCart = cart.reduce((acc, item) => {
-    const existing = acc.find((p) => p.id === item.id);
-    if (existing) {
-      existing.quantity += 1;
-      existing.totalPrice += item.price;
-    } else {
-      acc.push({ ...item, quantity: 1, totalPrice: item.price });
-    }
-    return acc;
-  }, []);
+  const consolidatedCart = useMemo(() => {
+    return cart.reduce((acc, item) => {
+      const existing = acc.find(p => p._id === item._id);
+      if (existing) {
+        existing.qty += item.qty || 1;
+        existing.totalPrice += item.price;
+      } else {
+        acc.push({ ...item, qty: item.qty || 1, totalPrice: item.price });
+      }
+      return acc;
+    }, []);
+  }, [cart]);
+
+  const total = consolidatedCart.reduce((acc, p) => acc + p.totalPrice, 0);
 
   const removeFromCart = (id) => {
-    const nextCart = cart.filter((p) => p.id !== id);
+    const nextCart = cart.filter(p => p._id !== id);
     setCart(nextCart);
     localStorage.setItem("ib_cart", JSON.stringify(nextCart));
   };
 
   const generateBill = () => {
-    if (cart.length === 0) return alert("Cart is empty!");
+    if (!cart.length) return alert("Cart is empty!");
     setBillGenerated(true);
   };
 
@@ -53,98 +56,86 @@ export default function Cart({ buyerName = "Buyer", onLogout }) {
     doc.text(`Date: ${dateStr}`, pageWidth - 10, 10, { align: "right" });
 
     const tableColumn = ["Product", "Qty (kg)", "Price (₹)"];
-    const tableRows = consolidatedCart.map((p) => [p.name, p.quantity, p.totalPrice.toString()]);
-    const total = consolidatedCart.reduce((acc, p) => acc + p.totalPrice, 0);
+    const tableRows = consolidatedCart.map(p => [p.name, p.qty, p.totalPrice.toString()]);
     tableRows.push(["Total", "", total.toString()]);
 
     autoTable(doc, { startY: 40, head: [tableColumn], body: tableRows, theme: "grid" });
     doc.save("Farm2Home_Bill.pdf");
   };
 
-  const total = consolidatedCart.reduce((acc, p) => acc + p.totalPrice, 0);
-
   return (
-    <div style={{ fontFamily: "Poppins, sans-serif", background: "#dbe9ff", minHeight: "100vh", display: "flex", flexDirection: "column" }}>
-      {/* Navbar */}
-      <nav className="navbar" style={{ display: "flex", justifyContent: "space-between", padding: "10px 40px", background: "white", boxShadow: "0 4px 12px rgba(0,0,0,0.05)", position: "sticky", top: 0, zIndex: 1000 }}>
-        <div style={{ fontSize: 24, fontWeight: 700, color: "#2563eb" }}>Farm2Home 🛒</div>
-        <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
-          <a onClick={() => navigate("/buyer-home")} style={{ cursor: "pointer", color: "#2563eb", padding: "6px 10px" }}>Home</a>
-          <a onClick={() => navigate("/products")} style={{ cursor: "pointer", color: "#2563eb", padding: "6px 10px" }}>Products</a>
-          <a onClick={() => navigate("/cart")} style={{ cursor: "pointer", color: "#2563eb", padding: "6px 10px" }}>Cart</a>
-          <a onClick={() => navigate("/help")} style={{ cursor: "pointer", color: "#2563eb", padding: "6px 10px" }}>Help</a>
-
-          <div className="profile-container" style={{ position: "relative" }}>
-            <div
-              onClick={() => setShowProfile(!showProfile)}
-              style={{ width: 40, height: 40, borderRadius: "50%", background: "#2563eb", color: "white", display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 600, cursor: "pointer" }}
-            >
-              {buyerName[0].toUpperCase()}
-            </div>
-            {showProfile && (
-              <div style={{ position: "absolute", top: 50, right: 0, background: "white", borderRadius: 10, padding: 8, display: "flex", flexDirection: "column", gap: 6, boxShadow: "0 8px 20px rgba(0,0,0,0.15)", zIndex: 100 }}>
-                <button onClick={() => navigate("/buyer-profile")} style={{ border: "none", background: "transparent", cursor: "pointer", fontWeight: 600, color: "#2563eb" }}>View Profile</button>
-                <button onClick={() => { onLogout && onLogout(); navigate("/"); }} style={{ border: "none", background: "transparent", cursor: "pointer", fontWeight: 600, color: "#ef4444" }}>Logout</button>
-              </div>
-            )}
-          </div>
-        </div>
-      </nav>
-
-      {/* Cart */}
-      <main style={{ maxWidth: 800, margin: "20px auto", padding: 20 }}>
+    <div className="cart-page">
+     
+      {/* Cart Content */}
+      <main className="cart-main">
         <h2>Your Cart</h2>
         {consolidatedCart.length === 0 ? (
-          <div>Your cart is empty</div>
+          <p className="empty-cart">Your cart is empty</p>
         ) : (
           <>
-            {consolidatedCart.map((p) => (
-              <div key={p.id} style={{ display: "flex", alignItems: "center", marginBottom: 12, background: "#e0f7fa", padding: 10, borderRadius: 8 }}>
-                <img src={p.image} alt={p.name} style={{ width: 80, height: 80, objectFit: "cover", borderRadius: 6, marginRight: 10 }} />
-                <div style={{ flex: 1 }}>
-                  <div style={{ fontWeight: 700 }}>{p.name}</div>
-                  <div>₹{p.price} x {p.quantity} kg = ₹{p.totalPrice}</div>
+            <div className="cart-items">
+              {consolidatedCart.map((p, idx) => (
+                <div key={p._id} className="cart-item">
+                  <img src={p.image} alt={p.name} />
+                  <div className="item-info">
+                    <div className="item-name">{p.name}</div>
+                    <div>₹{p.price} x {p.qty} kg = ₹{p.totalPrice}</div>
+                  </div>
+                  <button className="remove-btn" onClick={() => removeFromCart(p._id)}>Remove</button>
                 </div>
-                <button onClick={() => removeFromCart(p.id)} style={{ padding: "6px 10px", border: "none", borderRadius: 6, background: "#e53935", color: "#fff", cursor: "pointer" }}>Remove</button>
-              </div>
-            ))}
-            <div style={{ fontWeight: 700, fontSize: 18, marginTop: 12 }}>Total: ₹{total}</div>
-            <button onClick={generateBill} style={{ marginTop: 10, padding: "10px 16px", border: "none", borderRadius: 8, background: "#2563eb", color: "#fff", cursor: "pointer", fontWeight: "bold" }}>Generate Bill</button>
+              ))}
+            </div>
+            <div className="cart-total">Total: ₹{total}</div>
+            <button className="generate-bill-btn" onClick={generateBill}>Generate Bill</button>
           </>
         )}
 
         {billGenerated && (
-          <div style={{ marginTop: 20, padding: 15, background: "#e0f7fa", borderRadius: 8 }}>
+          <div className="bill-section">
             <h3>Bill</h3>
             {consolidatedCart.map((p, idx) => (
-              <div key={p.id}>{idx + 1}. {p.name} - {p.quantity} kg - ₹{p.totalPrice}</div>
+              <div key={p._id}>{idx + 1}. {p.name} - {p.qty} kg - ₹{p.totalPrice}</div>
             ))}
-            <div style={{ fontWeight: 700, marginTop: 10 }}>Total: ₹{total}</div>
-            <button onClick={downloadPDF} style={{ marginTop: 10, padding: "8px 12px", border: "none", borderRadius: 8, background: "#1976d2", color: "#fff", cursor: "pointer", fontWeight: "bold" }}>Download PDF</button>
+            <div className="cart-total">Total: ₹{total}</div>
+            <button className="download-btn" onClick={downloadPDF}>Download PDF</button>
           </div>
         )}
       </main>
 
-      {/* Footer */}
-      <footer style={{ background: "linear-gradient(135deg, #3b82f6, #60a5fa)", color: "white", padding: "40px 20px 25px", textAlign: "center", borderRadius: "12px 12px 0 0", marginTop: "auto" }}>
-        <div style={{ display: "flex", flexWrap: "wrap", justifyContent: "space-around", marginBottom: 20 }}>
-          <div style={{ maxWidth: 300, margin: 20, textAlign: "left" }}>
-            <h3>Farm2Home</h3>
-            <p>Helping buyers shop easily and securely from trusted farmers.</p>
-          </div>
-          <div style={{ maxWidth: 300, margin: 20, textAlign: "left" }}>
-            <h3>Contact</h3>
-            <p>Email: support@farm2home.com</p>
-            <p>Phone: +91 789xx xxxxx</p>
-            <p>Address: Hyderabad, India</p>
-          </div>
-          <div style={{ maxWidth: 300, margin: 20, textAlign: "left" }}>
-            <h3>Follow Us</h3>
-            <p>Facebook | Twitter | Instagram</p>
-          </div>
-        </div>
-        <p style={{ fontSize: 12, opacity: 0.8 }}>© 2025 Farm2Home — All rights reserved.</p>
-      </footer>
+      {/* Styles */}
+      <style>{`
+        /* General */
+        .cart-page { font-family: 'Poppins', sans-serif; background: linear-gradient(135deg, #f0f4ff, #dbe9ff); min-height: 100vh; display: flex; flex-direction: column; }
+
+      
+        /* Cart Main */
+        .cart-main { max-width: 900px; margin: 20px auto; padding: 20px; }
+        .cart-main h2 { text-align: center; font-size: 28px; margin-bottom: 20px; color: #1e3a8a; }
+
+        /* Cart Items */
+        .cart-items { display: flex; flex-direction: column; gap: 16px; margin-top: 10px; }
+        .cart-item { display: flex; align-items: center; gap: 16px; padding: 12px; border-radius: 16px; background: linear-gradient(135deg, #ffffff, #e0f7fa); transition: all 0.3s ease; box-shadow: 0 6px 18px rgba(0,0,0,0.08); }
+        .cart-item:hover { transform: translateY(-4px) scale(1.02); box-shadow: 0 12px 24px rgba(0,0,0,0.15); }
+        .cart-item img { width: 100px; height: 100px; object-fit: cover; border-radius: 12px; }
+        .item-info { flex: 1; }
+        .item-name { font-weight: 700; margin-bottom: 6px; color: #1e40af; font-size: 18px; }
+
+        /* Buttons */
+        .remove-btn { padding: 8px 14px; background: #ef4444; border: none; color: white; border-radius: 12px; cursor: pointer; font-weight: 600; transition: all 0.3s; }
+        .remove-btn:hover { background: #c62828; transform: scale(1.1); }
+
+        .cart-total { font-weight: 700; font-size: 20px; margin-top: 14px; color: #1e40af; text-align: right; }
+        .generate-bill-btn, .download-btn { margin-top: 14px; padding: 12px 18px; border: none; border-radius: 14px; background: linear-gradient(135deg, #2563eb, #60a5fa); color: white; cursor: pointer; font-weight: 600; font-size: 16px; transition: all 0.3s; }
+        .generate-bill-btn:hover, .download-btn:hover { background: linear-gradient(135deg, #1e40af, #3b82f6); transform: scale(1.05); }
+
+        /* Bill Section */
+        .bill-section { margin-top: 24px; padding: 20px; background: linear-gradient(135deg, #e0f7fa, #dbe9ff); border-radius: 16px; animation: fadeIn 0.5s ease-in-out; }
+
+        .empty-cart { margin-top: 20px; font-weight: 500; color: #1e40af; text-align: center; font-size: 18px; }
+
+        /* Animations */
+        @keyframes fadeIn { 0% { opacity: 0; transform: translateY(-8px); } 100% { opacity: 1; transform: translateY(0); } }
+      `}</style>
     </div>
   );
 }

@@ -1,6 +1,6 @@
 import React, { useEffect } from "react";
 import heroImg from "../assets/buyer.jpeg"; // buyer hero image
-
+import BuyerNavbar from "./BuyerNavbar";
 const buyerFeatures = [
   { name: "Products", desc: "Browse products from trusted farmers.", path: "/products" },
   { name: "Cart", desc: "View your cart and checkout easily.", path: "/cart" },

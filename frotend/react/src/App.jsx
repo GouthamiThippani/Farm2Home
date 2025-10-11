@@ -15,6 +15,7 @@ import Favorites from "./components/Favorites";
 import Navbar from "./components/Navbar";
 import Footer from "./components/Footer";
 import BuyerNavbar from "./components/BuyerNavbar";
+import BuyerHelp from "./components/BuyerHelp";
 
 function App() {
   const [user, setUser] = useState(null);
@@ -67,6 +68,7 @@ function App() {
             <Route path="/buyer-profile" element={<BuyerProfile />} />
             <Route path="/help" element={<Help />} />
             <Route path="*" element={<Navigate to="/buyer-home" />} />
+            <Route path="/buyer-help" element={<BuyerHelp />} />
             <Route path="/buyer-navbar" element={<BuyerNavbar buyerName={user.name} onLogout={handleLogout} />} />
           </>
         )}

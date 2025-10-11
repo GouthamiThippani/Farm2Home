@@ -26,7 +26,7 @@ export default function BuyerNavbar({ buyerName = "Buyer", onLogout }) {
         <a onClick={() => handleNav("/buyer-home")}>Home</a>
         <a onClick={() => handleNav("/products")}>Products</a>
         <a onClick={() => handleNav("/categories")}>Categories</a>
-        <a onClick={() => handleNav("/help")}>Help</a>
+        <a onClick={() => handleNav("/buyer-help")}>Help</a>
       </div>
 
       <div className="nav-right profile-container">

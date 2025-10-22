@@ -14,10 +14,9 @@ users = db["users"]
 def get_farmer(email):
     user = users.find_one({"email": email, "role": "farmer"})
     if not user:
-        # Return default profile (empty but valid)
+        # Return default profile with ALL fields
         return jsonify({
             "email": email,
-            "role": "farmer",
             "name": "",
             "phone": "",
             "crops": [],
@@ -26,9 +25,23 @@ def get_farmer(email):
             "experience_years": ""
         }), 200
 
-    user["_id"] = str(user["_id"])
-    user.pop("password", None)
-    return jsonify(user), 200
+    # ✅ RETURN ALL FIELDS (even if they don't exist in database)
+    user_data = {
+        "_id": str(user["_id"]),
+        "email": user.get("email", email),
+        "name": user.get("name", ""),
+        "phone": user.get("phone", ""),  # This ensures phone field exists
+        "crops": user.get("crops", []),  # This ensures crops field exists  
+        "location": user.get("location", ""),  # This ensures location field exists
+        "farm_size": user.get("farm_size", ""),  # This ensures farm_size field exists
+        "experience_years": user.get("experience_years", ""),  # This ensures experience_years exists
+        "role": user.get("role", "farmer")
+    }
+    
+    # Remove password if it exists
+    user_data.pop("password", None)
+    
+    return jsonify(user_data), 200
 
 
 # ✅ Save or update profile

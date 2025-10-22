@@ -34,7 +34,7 @@ const Navbar = ({ user, onLogout, notifications }) => {
           { to: "/buyer-home", label: "Home", icon: <FaHome /> },
           { to: "/products", label: "Products", icon: <FaLeaf /> },
           { to: "/cart", label: "Cart", icon: <FaShoppingCart /> },
-          { to: "/buyer-profile", label: "Profile", icon: <FaHeart /> },
+          { to: "/favorites", label: "Favorites", icon: <FaHeart /> },
           { to: "/help", label: "Help", icon: <FaQuestionCircle /> },
         ];
 

@@ -51,7 +51,7 @@ function App() {
             <Route path="/farmer-home" element={<FarmerHome farmerName={user.name} farmerEmail={user.email} />} />
             <Route path="/market-prices" element={<MarketPrices />} />
             <Route path="/sell-products" element={<SellProducts />} />
-            <Route path="/profile" element={<FarmerProfile />} />
+            <Route path="/profile" element={<FarmerProfile user={user} onLogout={handleLogout} />} /> {/* ✅ FIXED */}
             <Route path="/analytics" element={<Analytics />} />
             <Route path="/help" element={<Help />} />
             <Route path="*" element={<Navigate to="/farmer-home" />} />

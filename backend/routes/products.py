@@ -19,6 +19,8 @@ def products_health_check():
 
 # Helper to convert ObjectId to string
 def serialize_product(p):
+    if not p:
+        return None
     return {
         "_id": str(p["_id"]),
         "name": p["name"],
@@ -63,8 +65,8 @@ def add_product():
         print("✅ Product saved successfully:", product["_id"])
         return jsonify(serialize_product(product)), 201
     except Exception as e:
-        print("❌ Error saving product:", e)
-        return jsonify({"error": "Failed to save product"}), 500
+        print("❌ Error saving product:", str(e))
+        return jsonify({"error": "Failed to save product", "details": str(e)}), 500
 
 # Get all products (for buyers to see all products)
 @products_bp.route("/", methods=["GET"], strict_slashes=False)
@@ -75,7 +77,7 @@ def get_products():
         print(f"📊 Returning {len(products)} products")
         return jsonify([serialize_product(p) for p in products])
     except Exception as e:
-        print("❌ Error fetching products:", e)
+        print("❌ Error fetching products:", str(e))
         return jsonify({"error": "Failed to fetch products"}), 500
 
 # Get products by specific farmer (for farmer's dashboard)
@@ -88,30 +90,44 @@ def get_farmer_products(farmer_email):
         print(f"📊 Found {len(products)} products for {farmer_email}")
         return jsonify([serialize_product(p) for p in products])
     except Exception as e:
-        print("❌ Error fetching farmer products:", e)
+        print("❌ Error fetching farmer products:", str(e))
         return jsonify({"error": "Failed to fetch farmer products"}), 500
 
-# Delete product
-@products_bp.route("/<id>", methods=["DELETE"], strict_slashes=False)
+# Get single product by ID
+@products_bp.route("/<product_id>", methods=["GET"], strict_slashes=False)
 @cross_origin()
-def delete_product(id):
+def get_product(product_id):
     try:
-        print(f"🗑️ Deleting product: {id}")
-        result = mongo.db.products.delete_one({"_id": ObjectId(id)})
+        print(f"🔍 Fetching product: {product_id}")
+        product = mongo.db.products.find_one({"_id": ObjectId(product_id)})
+        if not product:
+            return jsonify({"error": "Product not found"}), 404
+        return jsonify(serialize_product(product))
+    except Exception as e:
+        print("❌ Error fetching product:", str(e))
+        return jsonify({"error": "Failed to fetch product"}), 500
+
+# Delete product
+@products_bp.route("/<product_id>", methods=["DELETE"], strict_slashes=False)
+@cross_origin()
+def delete_product(product_id):
+    try:
+        print(f"🗑️ Deleting product: {product_id}")
+        result = mongo.db.products.delete_one({"_id": ObjectId(product_id)})
         if result.deleted_count == 0:
             return jsonify({"error": "Product not found"}), 404
         return jsonify({"message": "Product deleted successfully"})
     except Exception as e:
-        print("❌ Error deleting product:", e)
+        print("❌ Error deleting product:", str(e))
         return jsonify({"error": "Failed to delete product"}), 500
 
 # Update product
-@products_bp.route("/<id>", methods=["PUT"], strict_slashes=False)
+@products_bp.route("/<product_id>", methods=["PUT"], strict_slashes=False)
 @cross_origin()
-def update_product(id):
+def update_product(product_id):
     try:
         data = request.get_json()
-        print(f"✏️ Updating product {id} with data:", data)
+        print(f"✏️ Updating product {product_id} with data:", data)
         
         update_data = {
             "name": data.get("name"),
@@ -122,7 +138,7 @@ def update_product(id):
             update_data["image"] = data["image"]
 
         result = mongo.db.products.update_one(
-            {"_id": ObjectId(id)}, 
+            {"_id": ObjectId(product_id)}, 
             {"$set": update_data}
         )
         
@@ -131,5 +147,5 @@ def update_product(id):
             
         return jsonify({"message": "Product updated successfully"})
     except Exception as e:
-        print("❌ Error updating product:", e)
+        print("❌ Error updating product:", str(e))
         return jsonify({"error": "Failed to update product"}), 500

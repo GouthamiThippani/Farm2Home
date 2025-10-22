@@ -2,18 +2,62 @@ import React, { useState, useEffect } from 'react';
 
 export default function BuyerProfile(){
   const [user, setUser] = useState({});
-  useEffect(()=> { setUser(JSON.parse(localStorage.getItem('ib_user')||'{}')); },[]);
-  const save = () => { localStorage.setItem('ib_user', JSON.stringify(user)); alert('Saved'); };
+  
+  useEffect(() => { 
+    const userData = localStorage.getItem('ib_user');
+    if (userData) {
+      setUser(JSON.parse(userData));
+    }
+  }, []);
+
+  const save = () => { 
+    localStorage.setItem('ib_user', JSON.stringify(user)); 
+    alert('Profile Saved Successfully!');
+  };
+
   return (
     <div style={{ paddingTop:84, minHeight:'calc(100vh - 84px)', fontFamily:'Arial, sans-serif', background:'#f2f9ff' }}>
       <div style={{ maxWidth:700, margin:'0 auto', padding:20 }}>
         <h2>Buyer Profile</h2>
         <div style={{ background:'#fff', padding:18, borderRadius:8, boxShadow:'0 6px 18px rgba(0,0,0,0.04)' }}>
-          <label style={{display:'block', marginBottom:6}}>Name</label>
-          <input value={user.name||''} onChange={e=>setUser({...user, name:e.target.value})} style={{ width:'100%', padding:10, borderRadius:8, marginBottom:12 }} />
-          <label style={{display:'block', marginBottom:6}}>Contact</label>
-          <input value={user.contact||''} onChange={e=>setUser({...user, contact:e.target.value})} style={{ width:'100%', padding:10, borderRadius:8, marginBottom:12 }} />
-          <button onClick={save} style={{ padding:'10px 12px', background:'#0b7a3f', color:'#fff', borderRadius:8, border:'none' }}>Save Profile</button>
+          <label style={{display:'block', marginBottom:6, fontWeight:'bold'}}>Name</label>
+          <input 
+            value={user.name||''} 
+            onChange={e => setUser({...user, name: e.target.value})} 
+            style={{ width:'100%', padding:10, borderRadius:8, marginBottom:12, border:'1px solid #ddd' }} 
+            placeholder="Enter your full name"
+          />
+          
+          <label style={{display:'block', marginBottom:6, fontWeight:'bold'}}>Phone Number</label>
+          <input 
+            value={user.contact||''} 
+            onChange={e => setUser({...user, contact: e.target.value})}
+            style={{ 
+              width:'100%', 
+              padding:10, 
+              borderRadius:8, 
+              marginBottom:12, 
+              border: '1px solid #ddd'
+            }} 
+            placeholder="Enter your phone number"
+            type="tel"
+          />
+          
+          <button 
+            onClick={save} 
+            style={{ 
+              padding:'12px 24px', 
+              background:'#0b7a3f', 
+              color:'#fff', 
+              borderRadius:8, 
+              border:'none',
+              fontSize: '16px',
+              fontWeight: 'bold',
+              cursor: 'pointer'
+            }}
+          >
+            Save Profile
+          </button>
         </div>
       </div>
     </div>

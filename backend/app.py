@@ -3,6 +3,7 @@ from flask_cors import CORS
 from routes.auth import auth_bp
 from routes.farmer import farmer_bp
 from routes.products import products_bp
+from routes.orders import orders_bp
 from models import init_app, mongo
 from config import Config
 import datetime
@@ -21,8 +22,9 @@ app.mongo = mongo
 app.register_blueprint(auth_bp)
 app.register_blueprint(farmer_bp)
 app.register_blueprint(products_bp)
+app.register_blueprint(orders_bp)
 
-# ✅ HEALTH CHECK ROUTE (Fixed)
+# ✅ HEALTH CHECK ROUTE
 @app.route('/api/health')
 def health_check():
     return jsonify({
@@ -32,7 +34,7 @@ def health_check():
         "service": "Farm2Home API"
     })
 
-# ✅ ADD THIS: Root endpoint
+# ✅ Root endpoint
 @app.route('/')
 def home():
     return jsonify({
@@ -41,6 +43,7 @@ def home():
         "endpoints": {
             "health": "/api/health",
             "products": "/api/products",
+            "orders": "/api/orders",
             "auth": "/api/auth"
         }
     })
@@ -49,4 +52,5 @@ if __name__ == "__main__":
     print("🚀 Starting Farm2Home Server on http://localhost:5000")
     print("✅ Health check available at: http://localhost:5000/api/health")
     print("✅ Products API available at: http://localhost:5000/api/products")
+    print("✅ Orders API available at: http://localhost:5000/api/orders")
     app.run(debug=True, port=5000)

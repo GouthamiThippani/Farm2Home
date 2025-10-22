@@ -16,7 +16,7 @@ import Navbar from "./components/Navbar";
 import Footer from "./components/Footer";
 import BuyerNavbar from "./components/BuyerNavbar";
 import BuyerHelp from "./components/BuyerHelp";
-
+import BuyerDashboard from "./components/BuyerDashboard";
 function App() {
   const [user, setUser] = useState(null);
 

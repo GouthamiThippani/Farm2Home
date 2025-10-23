@@ -1,30 +1,76 @@
 import React, { useEffect, useState } from "react";
 import { Line, Bar, Doughnut } from "react-chartjs-2";
 import { Chart as ChartJS, LineElement, BarElement, ArcElement, CategoryScale, LinearScale, PointElement, Tooltip, Legend } from "chart.js";
+import axios from "axios";
 
 ChartJS.register(LineElement, BarElement, ArcElement, CategoryScale, LinearScale, PointElement, Tooltip, Legend);
 
-export default function Analytics({ farmerName = "Farmer" }) {
-  const [sales, setSales] = useState([]);
+const API_BASE_URL = 'http://localhost:5000';
+
+export default function Analytics({ user }) {
+  const [analytics, setAnalytics] = useState(null);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    try {
-      setSales(JSON.parse(localStorage.getItem('ib_sales') || '[]'));
-    } catch {
-      setSales([]);
-    }
-  }, []);
+    if (!user?.email) return;
+    
+    const fetchAnalytics = async () => {
+      try {
+        setLoading(true);
+        const response = await axios.get(`${API_BASE_URL}/api/analytics/farmer/${user.email}`);
+        setAnalytics(response.data);
+      } catch (error) {
+        console.error("Error fetching analytics:", error);
+        // Fallback to empty data if API fails
+        setAnalytics({
+          total_sales: 0,
+          total_revenue: 0,
+          monthly_sales: {
+            labels: ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'],
+            data: [0,0,0,0,0,0,0,0,0,0,0,0]
+          },
+          product_performance: {},
+          recent_orders: 0
+        });
+      } finally {
+        setLoading(false);
+      }
+    };
 
-  const labels = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
-  const salesData = sales.length === 0 ? [5,8,6,12,9,15,10,14,7,11,13,8] : labels.map(m => sales.filter(s => new Date(s.date).toLocaleString('default', { month: 'short' }) === m).length);
-  const totalProducts = sales.length;
+    fetchAnalytics();
+  }, [user]);
 
+  if (loading) {
+    return (
+      <div className="analytics-page">
+        <div className="particles"></div>
+        <div style={{ textAlign: "center", marginTop: 100 }}>
+          <h2>Loading your analytics...</h2>
+        </div>
+      </div>
+    );
+  }
+
+  if (!analytics) {
+    return (
+      <div className="analytics-page">
+        <div className="particles"></div>
+        <div style={{ textAlign: "center", marginTop: 100 }}>
+          <h2>No analytics data available</h2>
+        </div>
+      </div>
+    );
+  }
+
+  const { total_sales, total_revenue, monthly_sales, product_performance } = analytics;
+
+  // Prepare chart data
   const lineChartData = {
-    labels,
+    labels: monthly_sales.labels,
     datasets: [
       {
         label: "Products Sold",
-        data: salesData,
+        data: monthly_sales.data,
         fill: true,
         borderColor: "#22d3ee",
         backgroundColor: "rgba(34,211,238,0.2)",
@@ -36,11 +82,11 @@ export default function Analytics({ farmerName = "Farmer" }) {
   };
 
   const barChartData = {
-    labels,
+    labels: monthly_sales.labels,
     datasets: [
       {
         label: "Monthly Revenue (₹)",
-        data: salesData.map(v => v * 120),
+        data: monthly_sales.data.map(v => v * 120), // Assuming average price of ₹120
         backgroundColor: "#3b82f6",
         borderRadius: 8,
       }
@@ -48,12 +94,12 @@ export default function Analytics({ farmerName = "Farmer" }) {
   };
 
   const doughnutData = {
-    labels: ["Sold", "Unsold"],
+    labels: Object.keys(product_performance),
     datasets: [
       {
-        label: "Stock",
-        data: [totalProducts, 50 - totalProducts],
-        backgroundColor: ["#facc15", "#1e293b"],
+        label: "Products Sold",
+        data: Object.values(product_performance),
+        backgroundColor: ["#facc15", "#3b82f6", "#22d3ee", "#10b981", "#f97316", "#8b5cf6"],
         borderWidth: 2
       }
     ]
@@ -71,15 +117,15 @@ export default function Analytics({ farmerName = "Farmer" }) {
       <div className="info-cards">
         <div className="card total-sales">
           <h3>Total Products Sold</h3>
-          <p>{totalProducts}</p>
+          <p>{total_sales}</p>
         </div>
         <div className="card revenue">
-          <h3>Estimated Revenue</h3>
-          <p>₹{totalProducts * 120}</p>
+          <h3>Total Revenue</h3>
+          <p>₹{total_revenue}</p>
         </div>
         <div className="card stock">
-          <h3>Stock Left</h3>
-          <p>{50 - totalProducts}</p>
+          <h3>Recent Orders</h3>
+          <p>{analytics.recent_orders}</p>
         </div>
       </div>
 
@@ -94,7 +140,7 @@ export default function Analytics({ farmerName = "Farmer" }) {
           <Bar data={barChartData} />
         </div>
         <div className="chart-card doughnut-card">
-          <h3>Stock Distribution</h3>
+          <h3>Product Performance</h3>
           <Doughnut data={doughnutData} />
         </div>
       </div>

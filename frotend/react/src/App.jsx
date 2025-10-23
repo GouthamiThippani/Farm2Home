@@ -52,7 +52,7 @@ function App() {
             <Route path="/market-prices" element={<MarketPrices />} />
             <Route path="/sell-products" element={<SellProducts />} />
             <Route path="/profile" element={<FarmerProfile user={user} onLogout={handleLogout} />} />
-            <Route path="/analytics" element={<Analytics />} />
+            <Route path="/analytics" element={<Analytics userEmail={user.email} />} />
             <Route path="/help" element={<Help />} />
             <Route path="*" element={<Navigate to="/farmer-home" />} />
           </>
@@ -64,8 +64,8 @@ function App() {
             <Route path="/buyer-home" element={<BuyerHome buyerName={user.name} buyerEmail={user.email} />} />
             <Route path="/products" element={<Products />} />
             <Route path="/favorites" element={<Favorites />} />
-            <Route path="/cart" element={<Cart />} />
-            <Route path="/buyer-profile" element={<BuyerProfile user={user} onLogout={handleLogout} />} /> {/* ✅ ONLY FIX THIS LINE */}
+            <Route path="/cart" element={<Cart user={user} />} /> {/* ✅ ADDED user prop HERE */}
+            <Route path="/buyer-profile" element={<BuyerProfile user={user} onLogout={handleLogout} />} />
             <Route path="/help" element={<Help />} />
             <Route path="*" element={<Navigate to="/buyer-home" />} />
             <Route path="/buyer-help" element={<BuyerHelp />} />

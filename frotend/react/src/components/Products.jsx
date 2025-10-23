@@ -45,7 +45,7 @@ export default function Products({ buyerName = "Buyer", onLogout }) {
     };
   }, []);
 
-  // Add to cart with real-time stock validation
+  // Add to cart with real-time stock validation - FIXED VERSION
   const addToCart = async (product) => {
     console.log("🛒 Adding to cart:", product.name, "Initial stock:", product.quantity);
     
@@ -70,12 +70,19 @@ export default function Products({ buyerName = "Buyer", onLogout }) {
         return;
       }
       
-      // Add to cart with fresh data
-      const nextCart = [...cart, { ...freshProduct, qty: 1 }];
+      // Add to cart with fresh data - INCLUDING FARMER_EMAIL
+      const cartItem = {
+        ...freshProduct,
+        qty: 1,
+        farmer_email: freshProduct.farmer_email // FIXED: Ensure farmer_email is included
+      };
+      
+      const nextCart = [...cart, cartItem];
       setCart(nextCart);
       localStorage.setItem("ib_cart", JSON.stringify(nextCart));
       
       console.log("✅ Added to cart. Stock now:", freshProduct.quantity - 1);
+      console.log("📧 Farmer email in cart:", freshProduct.farmer_email); // Debug log
       setRefresh(prev => prev + 1);
       
     } catch (error) {
@@ -92,7 +99,14 @@ export default function Products({ buyerName = "Buyer", onLogout }) {
         return;
       }
       
-      const nextCart = [...cart, product];
+      // Fallback cart item with farmer_email
+      const cartItem = {
+        ...product,
+        qty: 1,
+        farmer_email: product.farmer_email // FIXED: Ensure farmer_email is included
+      };
+      
+      const nextCart = [...cart, cartItem];
       setCart(nextCart);
       localStorage.setItem("ib_cart", JSON.stringify(nextCart));
       setRefresh(prev => prev + 1);

@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
-import { FaHeart, FaRegHeart, FaArrowUp, FaArrowDown } from "react-icons/fa";
+import { FaHeart, FaRegHeart } from "react-icons/fa";
 
 export default function Products({ buyerName = "Buyer", onLogout }) {
   const navigate = useNavigate();
@@ -16,48 +16,87 @@ export default function Products({ buyerName = "Buyer", onLogout }) {
     fetch("http://localhost:5000/api/products/")
       .then(res => res.json())
       .then(data => {
-        console.log("📦 Products loaded:", data);
+        console.log("📦 Products loaded:", data.length, "products");
         setProducts(data);
       })
       .catch(err => console.error("Error fetching products:", err));
   }, [refresh]);
 
-  // Real-time updates listener
+  // REAL-TIME UPDATES: Refresh products every 5 seconds
   useEffect(() => {
-    const handleProductsUpdate = () => {
-      console.log("🔄 Refreshing products...");
+    const interval = setInterval(() => {
+      console.log("🔄 Auto-refreshing products...");
       setRefresh(prev => prev + 1);
+    }, 5000);
+
+    // Also refresh when page becomes visible
+    const handleVisibilityChange = () => {
+      if (!document.hidden) {
+        console.log("👀 Page visible, refreshing products...");
+        setRefresh(prev => prev + 1);
+      }
     };
 
-    window.addEventListener('productsUpdated', handleProductsUpdate);
+    document.addEventListener('visibilitychange', handleVisibilityChange);
     
     return () => {
-      window.removeEventListener('productsUpdated', handleProductsUpdate);
+      clearInterval(interval);
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
     };
   }, []);
 
-  // Add to cart with stock validation
-  const addToCart = (product) => {
-    console.log("🛒 Adding to cart:", product.name, "Stock:", product.quantity);
+  // Add to cart with real-time stock validation
+  const addToCart = async (product) => {
+    console.log("🛒 Adding to cart:", product.name, "Initial stock:", product.quantity);
     
-    if (product.quantity === 0) {
-      alert("❌ This product is out of stock!");
-      return;
+    try {
+      // Get fresh product data from API
+      const freshResponse = await fetch(`http://localhost:5000/api/products/${product._id}`);
+      const freshProduct = await freshResponse.json();
+      
+      console.log("🔄 Fresh stock for", freshProduct.name, ":", freshProduct.quantity);
+      
+      if (freshProduct.quantity === 0) {
+        alert("❌ This product is out of stock!");
+        setRefresh(prev => prev + 1);
+        return;
+      }
+      
+      // Check cart quantity vs available stock
+      const cartQuantity = cart.filter(item => item._id === product._id).length;
+      if (cartQuantity >= freshProduct.quantity) {
+        alert(`⚠️ Only ${freshProduct.quantity} kg available! You already have ${cartQuantity} in cart.`);
+        setRefresh(prev => prev + 1);
+        return;
+      }
+      
+      // Add to cart with fresh data
+      const nextCart = [...cart, { ...freshProduct, qty: 1 }];
+      setCart(nextCart);
+      localStorage.setItem("ib_cart", JSON.stringify(nextCart));
+      
+      console.log("✅ Added to cart. Stock now:", freshProduct.quantity - 1);
+      setRefresh(prev => prev + 1);
+      
+    } catch (error) {
+      console.error("❌ Error fetching fresh product:", error);
+      // Fallback to original validation
+      if (product.quantity === 0) {
+        alert("❌ This product is out of stock!");
+        return;
+      }
+      
+      const cartQuantity = cart.filter(item => item._id === product._id).length;
+      if (cartQuantity >= product.quantity) {
+        alert(`⚠️ Only ${product.quantity} kg available! You already have ${cartQuantity} in cart.`);
+        return;
+      }
+      
+      const nextCart = [...cart, product];
+      setCart(nextCart);
+      localStorage.setItem("ib_cart", JSON.stringify(nextCart));
+      setRefresh(prev => prev + 1);
     }
-    
-    // Check if adding this would exceed available stock
-    const cartQuantity = cart.filter(item => item._id === product._id).length;
-    if (cartQuantity >= product.quantity) {
-      alert(`⚠️ Only ${product.quantity} kg available! You already have ${cartQuantity} in cart.`);
-      return;
-    }
-    
-    const nextCart = [...cart, product];
-    setCart(nextCart);
-    localStorage.setItem("ib_cart", JSON.stringify(nextCart));
-    
-    console.log("✅ Added to cart. Refreshing products...");
-    setRefresh(prev => prev + 1);
   };
 
   // Toggle favorite
@@ -80,38 +119,12 @@ export default function Products({ buyerName = "Buyer", onLogout }) {
     return filtered;
   }, [products, search, sortBy]);
 
-  // Get stock status with visual indicators
+  // Get stock status
   const getStockStatus = (quantity) => {
-    if (quantity === 0) {
-      return { 
-        text: "OUT OF STOCK", 
-        color: "#dc2626", 
-        bgColor: "#fef2f2",
-        borderColor: "#dc2626"
-      };
-    }
-    if (quantity <= 3) {
-      return { 
-        text: `LOW STOCK (${quantity} left)`, 
-        color: "#d97706", 
-        bgColor: "#fffbeb",
-        borderColor: "#d97706"
-      };
-    }
-    if (quantity <= 10) {
-      return { 
-        text: `IN STOCK (${quantity})`, 
-        color: "#2563eb", 
-        bgColor: "#f0f9ff",
-        borderColor: "#2563eb"
-      };
-    }
-    return { 
-      text: `IN STOCK (${quantity})`, 
-      color: "#2563eb", 
-      bgColor: "#f0f9ff",
-      borderColor: "#2563eb"
-    };
+    if (quantity === 0) return { text: "OUT OF STOCK", color: "#dc2626", bgColor: "#fef2f2" };
+    if (quantity <= 3) return { text: `LOW STOCK (${quantity} left)`, color: "#d97706", bgColor: "#fffbeb" };
+    if (quantity <= 10) return { text: `IN STOCK (${quantity})`, color: "#2563eb", bgColor: "#f0f9ff" };
+    return { text: `IN STOCK (${quantity})`, color: "#2563eb", bgColor: "#f0f9ff" };
   };
 
   return (
@@ -148,6 +161,11 @@ export default function Products({ buyerName = "Buyer", onLogout }) {
                 key={p._id} 
                 className={`product-card fade-card ${isOutOfStock ? 'out-of-stock' : ''} ${isLowStock ? 'low-stock' : ''}`}
               >
+                {/* Refresh Indicator */}
+                <div className="refresh-indicator" title="Real-time stock updates">
+                  🔄
+                </div>
+                
                 <img src={p.image} alt={p.name} loading="lazy" />
                 
                 <div className="product-info">
@@ -160,7 +178,7 @@ export default function Products({ buyerName = "Buyer", onLogout }) {
                     style={{ 
                       color: stockStatus.color, 
                       backgroundColor: stockStatus.bgColor,
-                      border: `1px solid ${stockStatus.borderColor}`
+                      border: `1px solid ${stockStatus.color}`
                     }}
                   >
                     {stockStatus.text}
@@ -268,32 +286,32 @@ export default function Products({ buyerName = "Buyer", onLogout }) {
           position: relative; 
           cursor: pointer; 
           transition: all 0.3s; 
-          border: 2px solid #dbeafe; /* BLUE BORDER */
+          border: 2px solid #dbeafe;
         }
 
         .product-card:hover { 
           transform: translateY(-8px) scale(1.02); 
           box-shadow: 0 15px 35px rgba(0, 0, 0, 0.15); 
-          border-color: #2563eb; /* DARKER BLUE ON HOVER */
+          border-color: #2563eb;
         }
 
         .product-card.out-of-stock { 
           opacity: 0.6; 
-          border-color: #fecaca; /* KEEP RED FOR OUT OF STOCK */
+          border-color: #fecaca;
         }
 
         .product-card.out-of-stock:hover { 
           transform: none; 
           box-shadow: 0 8px 25px rgba(0, 0, 0, 0.08); 
-          border-color: #fecaca; /* KEEP RED FOR OUT OF STOCK */
+          border-color: #fecaca;
         }
 
         .product-card.low-stock {
-          border-color: #93c5fd; /* BLUE FOR LOW STOCK */
+          border-color: #93c5fd;
         }
 
         .product-card.low-stock:hover {
-          border-color: #60a5fa; /* DARKER BLUE ON HOVER */
+          border-color: #60a5fa;
         }
         
         .product-card img { 
@@ -347,6 +365,19 @@ export default function Products({ buyerName = "Buyer", onLogout }) {
           color: #64748b;
           margin-bottom: 15px;
           font-style: italic;
+        }
+
+        /* Refresh Indicator */
+        .refresh-indicator {
+          position: absolute;
+          top: 12px;
+          left: 12px;
+          font-size: 12px;
+          opacity: 0.7;
+          animation: pulse 2s infinite;
+          background: rgba(255, 255, 255, 0.9);
+          border-radius: 50%;
+          padding: 4px;
         }
 
         /* Buttons */
@@ -403,7 +434,7 @@ export default function Products({ buyerName = "Buyer", onLogout }) {
 
         .go-to-cart-btn { 
           padding: 15px 30px; 
-          background: linear-gradient(135deg, #2563eb, #3b82f6); /* BLUE COLOR */
+          background: linear-gradient(135deg, #2563eb, #3b82f6);
           color: #fff; 
           border: none; 
           border-radius: 15px; 
@@ -411,13 +442,13 @@ export default function Products({ buyerName = "Buyer", onLogout }) {
           font-weight: bold; 
           font-size: 18px; 
           transition: all 0.3s; 
-          box-shadow: 0 8px 25px rgba(37, 99, 235, 0.3); /* BLUE SHADOW */
+          box-shadow: 0 8px 25px rgba(37, 99, 235, 0.3);
         }
 
         .go-to-cart-btn:hover { 
-          background: linear-gradient(135deg, #1e40af, #2563eb); /* DARKER BLUE */
+          background: linear-gradient(135deg, #1e40af, #2563eb); 
           transform: scale(1.05) translateY(-3px);
-          box-shadow: 0 12px 30px rgba(37, 99, 235, 0.4); /* BLUE SHADOW */
+          box-shadow: 0 12px 30px rgba(37, 99, 235, 0.4);
         }
 
         /* No Products */
@@ -453,6 +484,15 @@ export default function Products({ buyerName = "Buyer", onLogout }) {
           100% { 
             opacity: 1; 
             transform: translateY(0); 
+          } 
+        }
+
+        @keyframes pulse { 
+          0%, 100% { 
+            opacity: 0.7; 
+          } 
+          50% { 
+            opacity: 1; 
           } 
         }
 

@@ -16,6 +16,7 @@ import Navbar from "./components/Navbar";
 import Footer from "./components/Footer";
 import BuyerNavbar from "./components/BuyerNavbar";
 import BuyerHelp from "./components/BuyerHelp";
+
 function App() {
   const [user, setUser] = useState(null);
 
@@ -36,7 +37,7 @@ function App() {
 
   return (
     <Router>
-      {/* Render Navbar only if user is logged in */}
+      {/* Render Navbar only if user is logged in - KEEP ORIGINAL */}
       {user && <Navbar user={user} onLogout={handleLogout} />}
 
       <Routes>
@@ -50,7 +51,7 @@ function App() {
             <Route path="/farmer-home" element={<FarmerHome farmerName={user.name} farmerEmail={user.email} />} />
             <Route path="/market-prices" element={<MarketPrices />} />
             <Route path="/sell-products" element={<SellProducts />} />
-            <Route path="/profile" element={<FarmerProfile user={user} onLogout={handleLogout} />} /> {/* ✅ FIXED */}
+            <Route path="/profile" element={<FarmerProfile user={user} onLogout={handleLogout} />} />
             <Route path="/analytics" element={<Analytics />} />
             <Route path="/help" element={<Help />} />
             <Route path="*" element={<Navigate to="/farmer-home" />} />
@@ -64,7 +65,7 @@ function App() {
             <Route path="/products" element={<Products />} />
             <Route path="/favorites" element={<Favorites />} />
             <Route path="/cart" element={<Cart />} />
-            <Route path="/buyer-profile" element={<BuyerProfile />} />
+            <Route path="/buyer-profile" element={<BuyerProfile user={user} onLogout={handleLogout} />} /> {/* ✅ ONLY FIX THIS LINE */}
             <Route path="/help" element={<Help />} />
             <Route path="*" element={<Navigate to="/buyer-home" />} />
             <Route path="/buyer-help" element={<BuyerHelp />} />

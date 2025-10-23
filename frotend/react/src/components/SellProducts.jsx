@@ -211,11 +211,13 @@ export default function SellProducts({ user, onLogout }) {
           onClick={() => window.location.href = '/'}
           style={{
             padding: '10px 20px',
-            background: '#4CAF50',
+            background: 'linear-gradient(135deg, #60a5fa 0%, #3b82f6 100%)',
             color: 'white',
             border: 'none',
-            borderRadius: '5px',
-            cursor: 'pointer'
+            borderRadius: '8px',
+            cursor: 'pointer',
+            fontWeight: '600',
+            boxShadow: '0 4px 15px rgba(96, 165, 250, 0.3)'
           }}
         >
           Go to Login
@@ -233,12 +235,13 @@ export default function SellProducts({ user, onLogout }) {
 
       {error && (
         <div className="error-message" style={{
-          background: '#ffebee',
-          color: '#c62828',
-          padding: '10px',
-          borderRadius: '5px',
+          background: '#dbeafe',
+          color: '#1e40af',
+          padding: '12px 16px',
+          borderRadius: '8px',
           marginBottom: '20px',
-          border: '1px solid #ef5350'
+          border: '1px solid #93c5fd',
+          boxShadow: '0 2px 8px rgba(59, 130, 246, 0.1)'
         }}>
           {error}
         </div>
@@ -327,7 +330,20 @@ export default function SellProducts({ user, onLogout }) {
 
             <div className="form-actions">
               <button type="submit" disabled={loading} className="submit-btn">
-                {loading ? "Saving..." : editingId ? "Update Product" : "Add Product"}
+                {loading ? (
+                  <span className="button-content">
+                    <span className="spinner"></span>
+                    Saving...
+                  </span>
+                ) : editingId ? (
+                  <span className="button-content">
+                    ✏️ Update Product
+                  </span>
+                ) : (
+                  <span className="button-content">
+                    🚀 Add Product
+                  </span>
+                )}
               </button>
               {editingId && (
                 <button type="button" onClick={cancelEdit} className="cancel-btn">
@@ -432,22 +448,25 @@ export default function SellProducts({ user, onLogout }) {
         .page-header {
           text-align: center;
           margin-bottom: 30px;
-          padding: 20px;
-          background: linear-gradient(135deg, #4CAF50 0%, #45a049 100%);
+          padding: 30px 20px;
+          background: linear-gradient(135deg, #93c5fd 0%, #60a5fa 100%);
           color: white;
-          border-radius: 15px;
+          border-radius: 16px;
+          box-shadow: 0 8px 25px rgba(147, 197, 253, 0.3);
         }
 
         .title {
           margin: 0 0 10px 0;
           font-size: 2.5rem;
           font-weight: 700;
+          text-shadow: 0 2px 4px rgba(0,0,0,0.1);
         }
 
         .subtitle {
           margin: 0;
           font-size: 1.2rem;
-          opacity: 0.9;
+          opacity: 0.95;
+          font-weight: 500;
         }
 
         .tabs {
@@ -456,52 +475,65 @@ export default function SellProducts({ user, onLogout }) {
           margin-bottom: 30px;
           background: white;
           border-radius: 12px;
-          padding: 5px;
-          box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+          padding: 6px;
+          box-shadow: 0 5px 20px rgba(0,0,0,0.08);
         }
 
         .tab {
           flex: 1;
-          padding: 15px 20px;
+          padding: 16px 24px;
           border: none;
           background: transparent;
           font-size: 1.1rem;
           font-weight: 600;
           cursor: pointer;
-          border-radius: 8px;
+          border-radius: 10px;
           transition: all 0.3s ease;
+          color: #666;
         }
 
         .tab.active {
-          background: #4CAF50;
+          background: linear-gradient(135deg, #60a5fa 0%, #3b82f6 100%);
           color: white;
+          box-shadow: 0 4px 15px rgba(96, 165, 250, 0.4);
         }
 
         .sell-form {
           background: white;
-          padding: 30px;
-          border-radius: 15px;
-          box-shadow: 0 8px 25px rgba(0,0,0,0.1);
+          padding: 35px;
+          border-radius: 16px;
+          box-shadow: 0 8px 30px rgba(0,0,0,0.08);
           margin-bottom: 40px;
+          border: 1px solid #dbeafe;
         }
 
         .form-group {
-          margin-bottom: 20px;
+          margin-bottom: 24px;
         }
 
         .form-group label {
           font-weight: 600;
-          color: #2c3e50;
+          color: #37474F;
           margin-bottom: 8px;
           display: block;
+          font-size: 1rem;
         }
 
         .form-group input {
           width: 100%;
-          padding: 12px;
-          border: 2px solid #e0e0e0;
-          border-radius: 8px;
+          padding: 14px 16px;
+          border: 2px solid #dbeafe;
+          border-radius: 10px;
           font-size: 1rem;
+          transition: all 0.3s ease;
+          background: #FAFAFA;
+        }
+
+        .form-group input:focus {
+          outline: none;
+          border-color: #60a5fa;
+          background: white;
+          box-shadow: 0 0 0 3px rgba(96, 165, 250, 0.1);
         }
 
         .file-input-container {
@@ -514,13 +546,20 @@ export default function SellProducts({ user, onLogout }) {
 
         .file-input-label {
           display: block;
-          padding: 12px 20px;
-          background: #f8f9fa;
-          border: 2px dashed #dee2e6;
-          border-radius: 8px;
+          padding: 14px 20px;
+          background: #f0f9ff;
+          border: 2px dashed #93c5fd;
+          border-radius: 10px;
           cursor: pointer;
           text-align: center;
-          color: #6c757d;
+          color: #1e40af;
+          font-weight: 500;
+          transition: all 0.3s ease;
+        }
+
+        .file-input-label:hover {
+          background: #dbeafe;
+          border-color: #60a5fa;
         }
 
         .image-preview {
@@ -531,59 +570,110 @@ export default function SellProducts({ user, onLogout }) {
         .preview-image {
           max-width: 200px;
           max-height: 150px;
-          border-radius: 8px;
-          margin-bottom: 10px;
+          border-radius: 10px;
+          margin-bottom: 12px;
+          border: 2px solid #dbeafe;
         }
 
         .remove-image-btn {
-          padding: 8px 16px;
-          background: #dc3545;
+          padding: 10px 18px;
+          background: #ef4444;
           color: white;
           border: none;
-          border-radius: 6px;
+          border-radius: 8px;
           cursor: pointer;
+          font-weight: 500;
+          transition: all 0.3s ease;
+        }
+
+        .remove-image-btn:hover {
+          background: #dc2626;
+          transform: translateY(-1px);
         }
 
         .form-actions {
           display: flex;
-          gap: 15px;
-          margin-top: 25px;
+          gap: 16px;
+          margin-top: 30px;
         }
 
         .submit-btn {
           flex: 2;
-          padding: 15px 25px;
-          background: #4CAF50;
+          padding: 18px 28px;
+          background: linear-gradient(135deg, #60a5fa 0%, #3b82f6 100%);
           color: white;
           border: none;
-          border-radius: 8px;
+          border-radius: 12px;
           font-size: 1.1rem;
-          font-weight: 600;
+          font-weight: 700;
           cursor: pointer;
+          transition: all 0.3s ease;
+          box-shadow: 0 6px 20px rgba(96, 165, 250, 0.4);
+          position: relative;
+          overflow: hidden;
+        }
+
+        .submit-btn:hover:not(:disabled) {
+          transform: translateY(-2px);
+          box-shadow: 0 8px 25px rgba(96, 165, 250, 0.6);
+        }
+
+        .submit-btn:active:not(:disabled) {
+          transform: translateY(0);
         }
 
         .submit-btn:disabled {
-          background: #cccccc;
+          background: #B0BEC5;
+          box-shadow: none;
           cursor: not-allowed;
+          transform: none;
+        }
+
+        .button-content {
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          gap: 8px;
+        }
+
+        .spinner {
+          width: 18px;
+          height: 18px;
+          border: 2px solid transparent;
+          border-top: 2px solid white;
+          border-radius: 50%;
+          animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+          0% { transform: rotate(0deg); }
+          100% { transform: rotate(360deg); }
         }
 
         .cancel-btn {
           flex: 1;
-          padding: 15px 25px;
-          background: #6c757d;
+          padding: 18px 28px;
+          background: #94a3b8;
           color: white;
           border: none;
-          border-radius: 8px;
+          border-radius: 12px;
           font-size: 1.1rem;
           font-weight: 600;
           cursor: pointer;
+          transition: all 0.3s ease;
+        }
+
+        .cancel-btn:hover {
+          background: #64748b;
+          transform: translateY(-1px);
         }
 
         .product-list-section, .orders-section {
           background: white;
-          padding: 30px;
-          border-radius: 15px;
-          box-shadow: 0 8px 25px rgba(0,0,0,0.1);
+          padding: 35px;
+          border-radius: 16px;
+          box-shadow: 0 8px 30px rgba(0,0,0,0.08);
+          border: 1px solid #dbeafe;
         }
 
         .product-grid {
@@ -593,21 +683,34 @@ export default function SellProducts({ user, onLogout }) {
         }
 
         .product-card {
-          background: #f8f9fa;
-          border-radius: 12px;
+          background: #f8fafc;
+          border-radius: 14px;
           overflow: hidden;
-          box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+          box-shadow: 0 6px 20px rgba(0,0,0,0.08);
+          transition: all 0.3s ease;
+          border: 1px solid #e2e8f0;
+        }
+
+        .product-card:hover {
+          transform: translateY(-5px);
+          box-shadow: 0 12px 30px rgba(96, 165, 250, 0.2);
         }
 
         .product-image-container {
           height: 180px;
           overflow: hidden;
+          background: #f1f5f9;
         }
 
         .product-image {
           width: 100%;
           height: 100%;
           object-fit: cover;
+          transition: transform 0.3s ease;
+        }
+
+        .product-card:hover .product-image {
+          transform: scale(1.05);
         }
 
         .no-image {
@@ -615,8 +718,9 @@ export default function SellProducts({ user, onLogout }) {
           display: flex;
           align-items: center;
           justify-content: center;
-          background: #e9ecef;
-          color: #6c757d;
+          background: #f1f5f9;
+          color: #475569;
+          font-weight: 500;
         }
 
         .product-info {
@@ -624,41 +728,53 @@ export default function SellProducts({ user, onLogout }) {
         }
 
         .product-name {
-          margin: 0 0 10px 0;
+          margin: 0 0 12px 0;
           font-size: 1.2rem;
-          font-weight: 600;
+          font-weight: 700;
+          color: #37474F;
         }
 
         .price {
-          font-size: 1.3rem;
+          font-size: 1.4rem;
           font-weight: bold;
-          color: #27ae60;
-          margin: 10px 0;
+          color: #1e40af;
+          margin: 12px 0;
         }
 
         .actions {
           display: flex;
           gap: 10px;
-          margin-top: 15px;
+          margin-top: 18px;
         }
 
         .edit-btn, .delete-btn {
           flex: 1;
-          padding: 10px;
+          padding: 12px;
           border: none;
-          border-radius: 6px;
+          border-radius: 8px;
           font-weight: 600;
           cursor: pointer;
+          transition: all 0.3s ease;
         }
 
         .edit-btn {
-          background: #17a2b8;
+          background: linear-gradient(135deg, #60a5fa 0%, #3b82f6 100%);
           color: white;
         }
 
+        .edit-btn:hover {
+          transform: translateY(-2px);
+          box-shadow: 0 4px 12px rgba(96, 165, 250, 0.4);
+        }
+
         .delete-btn {
-          background: #dc3545;
+          background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
           color: white;
+        }
+
+        .delete-btn:hover {
+          transform: translateY(-2px);
+          box-shadow: 0 4px 12px rgba(239, 68, 68, 0.4);
         }
 
         .orders-grid {
@@ -668,48 +784,59 @@ export default function SellProducts({ user, onLogout }) {
         }
 
         .order-card {
-          background: #f8f9fa;
-          padding: 20px;
-          border-radius: 12px;
-          border-left: 5px solid #3498db;
+          background: #f8fafc;
+          padding: 24px;
+          border-radius: 14px;
+          border-left: 5px solid #60a5fa;
+          box-shadow: 0 6px 20px rgba(0,0,0,0.06);
+          transition: all 0.3s ease;
+          border: 1px solid #e2e8f0;
+        }
+
+        .order-card:hover {
+          transform: translateY(-3px);
+          box-shadow: 0 8px 25px rgba(96, 165, 250, 0.15);
         }
 
         .order-header {
           display: flex;
           justify-content: space-between;
           align-items: center;
-          margin-bottom: 15px;
+          margin-bottom: 18px;
         }
 
         .status {
-          padding: 5px 12px;
+          padding: 6px 14px;
           border-radius: 20px;
           font-size: 0.8rem;
           font-weight: 600;
         }
 
         .status.confirmed {
-          background: #d4edda;
-          color: #155724;
+          background: #dbeafe;
+          color: #1e40af;
         }
 
         .detail-row {
           display: flex;
           justify-content: space-between;
-          margin: 8px 0;
+          margin: 10px 0;
+          padding: 8px 0;
+          border-bottom: 1px solid #f1f5f9;
         }
 
         .empty-state {
           text-align: center;
-          padding: 40px;
-          background: #f8f9fa;
-          border-radius: 10px;
-          border: 2px dashed #dee2e6;
+          padding: 50px 40px;
+          background: #f8fafc;
+          border-radius: 12px;
+          border: 2px dashed #cbd5e1;
+          color: #475569;
         }
 
         @media (max-width: 768px) {
           .sell-page {
-            padding: 10px;
+            padding: 15px;
           }
           .tabs {
             flex-direction: column;
@@ -719,6 +846,12 @@ export default function SellProducts({ user, onLogout }) {
           }
           .product-grid, .orders-grid {
             grid-template-columns: 1fr;
+          }
+          .page-header {
+            padding: 25px 15px;
+          }
+          .title {
+            font-size: 2rem;
           }
         }
       `}</style>

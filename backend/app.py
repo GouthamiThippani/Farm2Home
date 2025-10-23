@@ -4,6 +4,7 @@ from routes.auth import auth_bp
 from routes.farmer import farmer_bp
 from routes.products import products_bp
 from routes.orders import orders_bp
+from routes.buyer import buyer_bp  # <-- ADD THIS IMPORT
 from models import init_app, mongo
 from config import Config
 import datetime
@@ -23,6 +24,7 @@ app.register_blueprint(auth_bp)
 app.register_blueprint(farmer_bp)
 app.register_blueprint(products_bp)
 app.register_blueprint(orders_bp)
+app.register_blueprint(buyer_bp)  # <-- ADD THIS REGISTRATION
 
 # ✅ HEALTH CHECK ROUTE
 @app.route('/api/health')
@@ -44,7 +46,8 @@ def home():
             "health": "/api/health",
             "products": "/api/products",
             "orders": "/api/orders",
-            "auth": "/api/auth"
+            "auth": "/api/auth",
+            "buyer": "/api/buyer"  # <-- ADD THIS ENDPOINT TOO
         }
     })
 
@@ -53,4 +56,5 @@ if __name__ == "__main__":
     print("✅ Health check available at: http://localhost:5000/api/health")
     print("✅ Products API available at: http://localhost:5000/api/products")
     print("✅ Orders API available at: http://localhost:5000/api/orders")
+    print("✅ Buyer API available at: http://localhost:5000/api/buyer")  # <-- ADD THIS LINE
     app.run(debug=True, port=5000)

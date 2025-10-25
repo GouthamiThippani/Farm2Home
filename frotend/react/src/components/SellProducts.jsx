@@ -13,6 +13,13 @@ export default function SellProducts({ user, onLogout }) {
   const [imagePreview, setImagePreview] = useState(null);
   const [activeTab, setActiveTab] = useState("products");
   const [error, setError] = useState("");
+  const [success, setSuccess] = useState("");
+  const [stats, setStats] = useState({
+    totalProducts: 0,
+    totalStock: 0,
+    lowStockItems: 0,
+    outOfStockItems: 0
+  });
 
   const API_URL = "http://localhost:5000/api/products";
   const ORDERS_API_URL = "http://localhost:5000/api/orders";
@@ -32,6 +39,20 @@ export default function SellProducts({ user, onLogout }) {
     return null;
   };
 
+  // Calculate statistics
+  const calculateStats = (products) => {
+    const totalStock = products.reduce((sum, product) => sum + product.quantity, 0);
+    const lowStockItems = products.filter(product => product.quantity > 0 && product.quantity <= 5).length;
+    const outOfStockItems = products.filter(product => product.quantity === 0).length;
+
+    setStats({
+      totalProducts: products.length,
+      totalStock,
+      lowStockItems,
+      outOfStockItems
+    });
+  };
+
   // Fetch only this farmer's products
   const fetchMyProducts = async () => {
     try {
@@ -41,6 +62,7 @@ export default function SellProducts({ user, onLogout }) {
         const response = await axios.get(`${API_URL}/farmer/${currentUser.email}`);
         console.log("✅ Products fetched:", response.data);
         setProducts(response.data);
+        calculateStats(response.data);
         setError("");
       } else {
         setError("User not found. Please login again.");
@@ -64,12 +86,21 @@ export default function SellProducts({ user, onLogout }) {
     }
   };
 
+  // Real-time updates - refresh every 30 seconds
   useEffect(() => {
     const currentUser = getCurrentUser();
     if (currentUser) {
       console.log("👤 Current user:", currentUser);
       fetchMyProducts();
       fetchMyOrders();
+
+      // Set up interval for real-time updates
+      const interval = setInterval(() => {
+        fetchMyProducts();
+        fetchMyOrders();
+      }, 30000); // 30 seconds
+
+      return () => clearInterval(interval);
     } else {
       setError("Please login to access this page");
     }
@@ -101,13 +132,29 @@ export default function SellProducts({ user, onLogout }) {
     setImagePreview(null);
   };
 
+  const showSuccess = (message) => {
+    setSuccess(message);
+    setTimeout(() => setSuccess(""), 3000);
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError("");
+    setSuccess("");
 
     // Validate form
     if (!name || !price || !quantity) {
       setError("Please fill all required fields");
+      return;
+    }
+
+    if (price <= 0) {
+      setError("Price must be greater than 0");
+      return;
+    }
+
+    if (quantity <= 0) {
+      setError("Quantity must be greater than 0");
       return;
     }
 
@@ -139,8 +186,10 @@ export default function SellProducts({ user, onLogout }) {
       let response;
       if (editingId) {
         response = await axios.put(`${API_URL}/${editingId}`, payload);
+        showSuccess("Product updated successfully!");
       } else {
         response = await axios.post(API_URL, payload);
+        showSuccess("Product added successfully!");
       }
 
       console.log("✅ Product saved successfully:", response.data);
@@ -165,10 +214,11 @@ export default function SellProducts({ user, onLogout }) {
   };
 
   const handleDelete = async (id) => {
-    if (!window.confirm("Are you sure you want to delete this product?")) return;
+    if (!window.confirm("Are you sure you want to delete this product? This action cannot be undone.")) return;
     
     try {
       await axios.delete(`${API_URL}/${id}`);
+      showSuccess("Product deleted successfully!");
       await fetchMyProducts();
     } catch (err) {
       console.error("Error deleting product:", err);
@@ -194,6 +244,12 @@ export default function SellProducts({ user, onLogout }) {
     setFile(null);
     setImagePreview(null);
     setError("");
+  };
+
+  const getStockStatus = (quantity) => {
+    if (quantity === 0) return { status: "Out of Stock", color: "#ef4444", bgColor: "#fef2f2" };
+    if (quantity <= 5) return { status: "Low Stock", color: "#f59e0b", bgColor: "#fffbeb" };
+    return { status: "In Stock", color: "#10b981", bgColor: "#f0fdf4" };
   };
 
   const currentUser = getCurrentUser();
@@ -229,21 +285,51 @@ export default function SellProducts({ user, onLogout }) {
   return (
     <div className="sell-page">
       <div className="page-header">
-        <h2 className="title">Sell Your Products</h2>
-        <p className="subtitle">Welcome, {currentUser.name || currentUser.email}! Manage your farm products.</p>
+        <h2 className="title">Manage Your Products</h2>
+        <p className="subtitle">Welcome, {currentUser.name || currentUser.email}! Manage your farm products and track sales.</p>
+      </div>
+
+      {/* Stats Overview */}
+      <div className="stats-overview">
+        <div className="stat-card">
+          <div className="stat-icon">📦</div>
+          <div className="stat-info">
+            <h3>{stats.totalProducts}</h3>
+            <p>Total Products</p>
+          </div>
+        </div>
+        <div className="stat-card">
+          <div className="stat-icon">📊</div>
+          <div className="stat-info">
+            <h3>{stats.totalStock} kg</h3>
+            <p>Total Stock</p>
+          </div>
+        </div>
+        <div className="stat-card warning">
+          <div className="stat-icon">⚠️</div>
+          <div className="stat-info">
+            <h3>{stats.lowStockItems}</h3>
+            <p>Low Stock Items</p>
+          </div>
+        </div>
+        <div className="stat-card danger">
+          <div className="stat-icon">🚫</div>
+          <div className="stat-info">
+            <h3>{stats.outOfStockItems}</h3>
+            <p>Out of Stock</p>
+          </div>
+        </div>
       </div>
 
       {error && (
-        <div className="error-message" style={{
-          background: '#dbeafe',
-          color: '#1e40af',
-          padding: '12px 16px',
-          borderRadius: '8px',
-          marginBottom: '20px',
-          border: '1px solid #93c5fd',
-          boxShadow: '0 2px 8px rgba(59, 130, 246, 0.1)'
-        }}>
-          {error}
+        <div className="error-message">
+          ⚠️ {error}
+        </div>
+      )}
+
+      {success && (
+        <div className="success-message">
+          ✅ {success}
         </div>
       )}
 
@@ -258,49 +344,51 @@ export default function SellProducts({ user, onLogout }) {
           className={`tab ${activeTab === "orders" ? "active" : ""}`}
           onClick={() => setActiveTab("orders")}
         >
-          💰 My Sales ({orders.length})
+          💰 Sales History ({orders.length})
         </button>
       </div>
 
       {activeTab === "products" && (
         <>
           <form className="sell-form" onSubmit={handleSubmit}>
-            <h3>{editingId ? "Edit Product" : "Add New Product"}</h3>
+            <h3>{editingId ? "✏️ Edit Product" : "➕ Add New Product"}</h3>
             
-            <div className="form-group">
-              <label>Product Name *</label>
-              <input
-                type="text"
-                value={name}
-                placeholder="e.g., Organic Tomatoes"
-                onChange={(e) => setName(e.target.value)}
-                required
-              />
-            </div>
+            <div className="form-row">
+              <div className="form-group">
+                <label>Product Name *</label>
+                <input
+                  type="text"
+                  value={name}
+                  placeholder="e.g., Organic Tomatoes"
+                  onChange={(e) => setName(e.target.value)}
+                  required
+                />
+              </div>
 
-            <div className="form-group">
-              <label>Price (₹ / kg) *</label>
-              <input
-                type="number"
-                value={price}
-                min="1"
-                step="0.5"
-                placeholder="e.g., 50"
-                onChange={(e) => setPrice(e.target.value)}
-                required
-              />
-            </div>
+              <div className="form-group">
+                <label>Price (₹ / kg) *</label>
+                <input
+                  type="number"
+                  value={price}
+                  min="1"
+                  step="0.5"
+                  placeholder="e.g., 50"
+                  onChange={(e) => setPrice(e.target.value)}
+                  required
+                />
+              </div>
 
-            <div className="form-group">
-              <label>Quantity (kg) *</label>
-              <input
-                type="number"
-                value={quantity}
-                min="1"
-                placeholder="e.g., 100"
-                onChange={(e) => setQuantity(e.target.value)}
-                required
-              />
+              <div className="form-group">
+                <label>Quantity (kg) *</label>
+                <input
+                  type="number"
+                  value={quantity}
+                  min="1"
+                  placeholder="e.g., 100"
+                  onChange={(e) => setQuantity(e.target.value)}
+                  required
+                />
+              </div>
             </div>
 
             <div className="form-group">
@@ -314,7 +402,7 @@ export default function SellProducts({ user, onLogout }) {
                   id="file-input"
                 />
                 <label htmlFor="file-input" className="file-input-label">
-                  {file ? file.name : "Choose Image File"}
+                  {file ? `📁 ${file.name}` : "📸 Choose Image File"}
                 </label>
               </div>
 
@@ -322,7 +410,7 @@ export default function SellProducts({ user, onLogout }) {
                 <div className="image-preview">
                   <img src={imagePreview} alt="Preview" className="preview-image" />
                   <button type="button" onClick={removeImage} className="remove-image-btn">
-                    Remove Image
+                    🗑️ Remove Image
                   </button>
                 </div>
               )}
@@ -333,7 +421,7 @@ export default function SellProducts({ user, onLogout }) {
                 {loading ? (
                   <span className="button-content">
                     <span className="spinner"></span>
-                    Saving...
+                    {editingId ? "Updating..." : "Adding..."}
                   </span>
                 ) : editingId ? (
                   <span className="button-content">
@@ -354,43 +442,73 @@ export default function SellProducts({ user, onLogout }) {
           </form>
 
           <div className="product-list-section">
-            <h3>Your Products</h3>
+            <div className="section-header">
+              <h3>Your Products ({products.length})</h3>
+              <div className="stock-legends">
+                <div className="legend-item">
+                  <span className="legend-color in-stock"></span>
+                  <span>In Stock</span>
+                </div>
+                <div className="legend-item">
+                  <span className="legend-color low-stock"></span>
+                  <span>Low Stock</span>
+                </div>
+                <div className="legend-item">
+                  <span className="legend-color out-of-stock"></span>
+                  <span>Out of Stock</span>
+                </div>
+              </div>
+            </div>
             {products.length === 0 ? (
               <div className="empty-state">
-                <p>No products yet. Add your first product to start selling!</p>
+                <div className="empty-icon">🌱</div>
+                <h4>No products yet</h4>
+                <p>Add your first product to start selling!</p>
               </div>
             ) : (
               <div className="product-grid">
-                {products.map((product) => (
-                  <div key={product._id} className="product-card">
-                    <div className="product-image-container">
-                      {product.image ? (
-                        <img src={product.image} alt={product.name} className="product-image" />
-                      ) : (
-                        <div className="no-image">🌱 No Image</div>
-                      )}
-                    </div>
-                    
-                    <div className="product-info">
-                      <h4 className="product-name">{product.name}</h4>
-                      <p className="price">₹{product.price}/kg</p>
-                      <p className="quantity">
-                        <span className={`stock ${product.quantity > 0 ? "in-stock" : "out-of-stock"}`}>
-                          {product.quantity > 0 ? `${product.quantity} kg available` : "Out of Stock"}
-                        </span>
-                      </p>
+                {products.map((product) => {
+                  const stockStatus = getStockStatus(product.quantity);
+                  return (
+                    <div key={product._id} className="product-card" style={{ borderLeft: `4px solid ${stockStatus.color}` }}>
+                      <div className="product-image-container">
+                        {product.image ? (
+                          <img src={product.image} alt={product.name} className="product-image" />
+                        ) : (
+                          <div className="no-image">🌱 No Image</div>
+                        )}
+                        <div className="stock-badge" style={{ backgroundColor: stockStatus.bgColor, color: stockStatus.color }}>
+                          {stockStatus.status}
+                        </div>
+                      </div>
                       
-                      <div className="actions">
-                        <button className="edit-btn" onClick={() => handleEdit(product)}>
-                          ✏️ Edit
-                        </button>
-                        <button className="delete-btn" onClick={() => handleDelete(product._id)}>
-                          🗑️ Delete
-                        </button>
+                      <div className="product-info">
+                        <h4 className="product-name">{product.name}</h4>
+                        <p className="price">₹{product.price}/kg</p>
+                        <p className="quantity">
+                          <span className="stock-text" style={{ color: stockStatus.color }}>
+                            {product.quantity} kg available
+                          </span>
+                        </p>
+                        
+                        <div className="product-meta">
+                          <span className="created-date">
+                            Added: {new Date(product.created_at).toLocaleDateString()}
+                          </span>
+                        </div>
+                        
+                        <div className="actions">
+                          <button className="edit-btn" onClick={() => handleEdit(product)}>
+                            ✏️ Edit
+                          </button>
+                          <button className="delete-btn" onClick={() => handleDelete(product._id)}>
+                            🗑️ Delete
+                          </button>
+                        </div>
                       </div>
                     </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             )}
           </div>
@@ -399,17 +517,24 @@ export default function SellProducts({ user, onLogout }) {
 
       {activeTab === "orders" && (
         <div className="orders-section">
-          <h3>Your Sales History</h3>
+          <h3>Sales History ({orders.length})</h3>
           {orders.length === 0 ? (
             <div className="empty-state">
-              <p>No sales yet. Your orders will appear here when buyers purchase your products.</p>
+              <div className="empty-icon">💰</div>
+              <h4>No sales yet</h4>
+              <p>Your sales will appear here when buyers purchase your products.</p>
             </div>
           ) : (
-            <div className="orders-grid">
+            <div className="orders-list">
               {orders.map((order) => (
                 <div key={order._id} className="order-card">
                   <div className="order-header">
-                    <h4>{order.product_name}</h4>
+                    <div className="order-title">
+                      <h4>{order.product_name}</h4>
+                      <span className="order-date">
+                        {new Date(order.created_at).toLocaleDateString()} at {new Date(order.created_at).toLocaleTimeString()}
+                      </span>
+                    </div>
                     <span className={`status ${order.status}`}>
                       {order.status}
                     </span>
@@ -425,6 +550,10 @@ export default function SellProducts({ user, onLogout }) {
                       <span className="value">{order.quantity} kg</span>
                     </div>
                     <div className="detail-row">
+                      <span className="label">Price per kg:</span>
+                      <span className="value">₹{order.total_price / order.quantity}</span>
+                    </div>
+                    <div className="detail-row total">
                       <span className="label">Total Revenue:</span>
                       <span className="value price">₹{order.total_price}</span>
                     </div>
@@ -469,6 +598,71 @@ export default function SellProducts({ user, onLogout }) {
           font-weight: 500;
         }
 
+        /* Stats Overview */
+        .stats-overview {
+          display: grid;
+          grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+          gap: 20px;
+          margin-bottom: 30px;
+        }
+
+        .stat-card {
+          background: white;
+          padding: 20px;
+          border-radius: 12px;
+          box-shadow: 0 4px 15px rgba(0,0,0,0.08);
+          display: flex;
+          align-items: center;
+          gap: 15px;
+          border-left: 4px solid #60a5fa;
+        }
+
+        .stat-card.warning {
+          border-left-color: #f59e0b;
+        }
+
+        .stat-card.danger {
+          border-left-color: #ef4444;
+        }
+
+        .stat-icon {
+          font-size: 2rem;
+        }
+
+        .stat-info h3 {
+          margin: 0;
+          font-size: 1.8rem;
+          font-weight: 700;
+          color: #1e293b;
+        }
+
+        .stat-info p {
+          margin: 5px 0 0 0;
+          color: #64748b;
+          font-weight: 500;
+        }
+
+        /* Messages */
+        .error-message, .success-message {
+          padding: 16px 20px;
+          border-radius: 10px;
+          margin-bottom: 25px;
+          font-weight: 600;
+          box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+        }
+
+        .error-message {
+          background: #fef2f2;
+          color: #dc2626;
+          border: 1px solid #fecaca;
+        }
+
+        .success-message {
+          background: #f0fdf4;
+          color: #16a34a;
+          border: 1px solid #bbf7d0;
+        }
+
         .tabs {
           display: flex;
           justify-content: center;
@@ -507,8 +701,15 @@ export default function SellProducts({ user, onLogout }) {
           border: 1px solid #dbeafe;
         }
 
+        .form-row {
+          display: grid;
+          grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+          gap: 20px;
+          margin-bottom: 20px;
+        }
+
         .form-group {
-          margin-bottom: 24px;
+          margin-bottom: 0;
         }
 
         .form-group label {
@@ -676,6 +877,38 @@ export default function SellProducts({ user, onLogout }) {
           border: 1px solid #dbeafe;
         }
 
+        .section-header {
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          margin-bottom: 25px;
+          flex-wrap: wrap;
+          gap: 15px;
+        }
+
+        .stock-legends {
+          display: flex;
+          gap: 20px;
+        }
+
+        .legend-item {
+          display: flex;
+          align-items: center;
+          gap: 8px;
+          font-size: 0.9rem;
+          color: #64748b;
+        }
+
+        .legend-color {
+          width: 12px;
+          height: 12px;
+          border-radius: 50%;
+        }
+
+        .legend-color.in-stock { background: #10b981; }
+        .legend-color.low-stock { background: #f59e0b; }
+        .legend-color.out-of-stock { background: #ef4444; }
+
         .product-grid {
           display: grid;
           grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
@@ -700,6 +933,7 @@ export default function SellProducts({ user, onLogout }) {
           height: 180px;
           overflow: hidden;
           background: #f1f5f9;
+          position: relative;
         }
 
         .product-image {
@@ -723,6 +957,17 @@ export default function SellProducts({ user, onLogout }) {
           font-weight: 500;
         }
 
+        .stock-badge {
+          position: absolute;
+          top: 10px;
+          right: 10px;
+          padding: 6px 12px;
+          border-radius: 20px;
+          font-size: 0.8rem;
+          font-weight: 600;
+          backdrop-filter: blur(10px);
+        }
+
         .product-info {
           padding: 20px;
         }
@@ -739,6 +984,22 @@ export default function SellProducts({ user, onLogout }) {
           font-weight: bold;
           color: #1e40af;
           margin: 12px 0;
+        }
+
+        .stock-text {
+          font-weight: 600;
+          font-size: 0.9rem;
+        }
+
+        .product-meta {
+          margin: 15px 0;
+          padding-top: 15px;
+          border-top: 1px solid #e2e8f0;
+        }
+
+        .created-date {
+          font-size: 0.8rem;
+          color: #64748b;
         }
 
         .actions {
@@ -777,9 +1038,9 @@ export default function SellProducts({ user, onLogout }) {
           box-shadow: 0 4px 12px rgba(239, 68, 68, 0.4);
         }
 
-        .orders-grid {
-          display: grid;
-          grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+        .orders-list {
+          display: flex;
+          flex-direction: column;
           gap: 20px;
         }
 
@@ -801,8 +1062,19 @@ export default function SellProducts({ user, onLogout }) {
         .order-header {
           display: flex;
           justify-content: space-between;
-          align-items: center;
+          align-items: flex-start;
           margin-bottom: 18px;
+        }
+
+        .order-title h4 {
+          margin: 0 0 5px 0;
+          font-size: 1.1rem;
+          color: #37474F;
+        }
+
+        .order-date {
+          font-size: 0.8rem;
+          color: #64748b;
         }
 
         .status {
@@ -825,6 +1097,14 @@ export default function SellProducts({ user, onLogout }) {
           border-bottom: 1px solid #f1f5f9;
         }
 
+        .detail-row.total {
+          border-bottom: none;
+          border-top: 2px solid #e2e8f0;
+          font-weight: 700;
+          margin-top: 15px;
+          padding-top: 15px;
+        }
+
         .empty-state {
           text-align: center;
           padding: 50px 40px;
@@ -832,6 +1112,16 @@ export default function SellProducts({ user, onLogout }) {
           border-radius: 12px;
           border: 2px dashed #cbd5e1;
           color: #475569;
+        }
+
+        .empty-icon {
+          font-size: 3rem;
+          margin-bottom: 15px;
+        }
+
+        .empty-state h4 {
+          margin: 0 0 10px 0;
+          color: #37474F;
         }
 
         @media (max-width: 768px) {
@@ -844,7 +1134,7 @@ export default function SellProducts({ user, onLogout }) {
           .form-actions {
             flex-direction: column;
           }
-          .product-grid, .orders-grid {
+          .product-grid {
             grid-template-columns: 1fr;
           }
           .page-header {
@@ -852,6 +1142,16 @@ export default function SellProducts({ user, onLogout }) {
           }
           .title {
             font-size: 2rem;
+          }
+          .stats-overview {
+            grid-template-columns: 1fr 1fr;
+          }
+          .section-header {
+            flex-direction: column;
+            align-items: flex-start;
+          }
+          .form-row {
+            grid-template-columns: 1fr;
           }
         }
       `}</style>

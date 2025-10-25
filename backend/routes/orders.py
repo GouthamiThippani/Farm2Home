@@ -203,3 +203,4 @@ def delete_order(order_id):
     except Exception as e:
         print("❌ Error deleting order:", str(e))
         return jsonify({"error": "Failed to delete order"}), 500
+    # After creating order successfully:

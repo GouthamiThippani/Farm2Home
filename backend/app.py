@@ -6,6 +6,7 @@ from routes.farmer import farmer_bp
 from routes.products import products_bp
 from routes.orders import orders_bp
 from routes.buyer import buyer_bp
+from routes.favorites import favorites_bp
 from routes.analytics import analytics_bp  # <-- ADD THIS LINE
 from models import init_app, mongo
 from config import Config
@@ -27,8 +28,8 @@ app.register_blueprint(farmer_bp)
 app.register_blueprint(products_bp)
 app.register_blueprint(orders_bp)
 app.register_blueprint(buyer_bp)
-app.register_blueprint(analytics_bp)  # <-- ADD THIS LINE
-
+app.register_blueprint(analytics_bp)
+app.register_blueprint(favorites_bp)
 # ✅ HEALTH CHECK ROUTE
 @app.route('/api/health')
 def health_check():

@@ -1,2 +1,6 @@
 pymongo
 flask_pymongo
+python-dotenv
+gunicorn
+flask-cors
+dnspython
